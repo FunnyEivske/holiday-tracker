@@ -328,144 +328,124 @@
             z-index: 1;
         }
 
+        .snowflake-wrapper {
+            position: fixed;
+            top: -10vh;
+            z-index: 9999;
+            pointer-events: none;
+            will-change: transform;
+            animation-name: snowflakes-fall;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+
         .snowflake {
             color: #fff;
-            font-size: 1em;
+            font-size: 1.5em;
+            /* Større snø */
             font-family: Arial;
-            text-shadow: 0 0 1px #000;
-        }
-
-        @-webkit-keyframes snowflakes-fall {
-            0% {
-                top: -10%
-            }
-
-            100% {
-                top: 100%
-            }
-        }
-
-        @-webkit-keyframes snowflakes-shake {
-            0% {
-                -webkit-transform: translateX(0px);
-                transform: translateX(0px)
-            }
-
-            50% {
-                -webkit-transform: translateX(80px);
-                transform: translateX(80px)
-            }
-
-            100% {
-                -webkit-transform: translateX(0px);
-                transform: translateX(0px)
-            }
+            /* text-shadow: removed for perf */
+            will-change: transform;
+            animation-name: snowflakes-shake;
+            animation-duration: 3s;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
         }
 
         @keyframes snowflakes-fall {
             0% {
-                top: -10%
+                transform: translateY(0);
             }
 
             100% {
-                top: 100%
+                transform: translateY(110vh);
             }
         }
 
         @keyframes snowflakes-shake {
             0% {
-                transform: translateX(0px)
+                transform: translateX(0px);
             }
 
             50% {
-                transform: translateX(80px)
+                transform: translateX(80px);
             }
 
             100% {
-                transform: translateX(0px)
+                transform: translateX(0px);
             }
         }
 
-        .snowflake {
-            position: fixed;
-            top: -10%;
-            z-index: 9999;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            cursor: default;
-            -webkit-animation-name: snowflakes-fall, snowflakes-shake;
-            -webkit-animation-duration: 10s, 3s;
-            -webkit-animation-timing-function: linear, ease-in-out;
-            -webkit-animation-iteration-count: infinite, infinite;
-            -webkit-animation-play-state: running, running;
-            animation-name: snowflakes-fall, snowflakes-shake;
-            animation-duration: 10s, 3s;
-            animation-timing-function: linear, ease-in-out;
-            animation-iteration-count: infinite, infinite;
-            animation-play-state: running, running
-        }
-
-        .snowflake:nth-of-type(0) {
+        /* Delays for Wrappers (Falling) */
+        .snowflake-wrapper:nth-of-type(1) {
             left: 1%;
-            -webkit-animation-delay: 0s, 0s;
-            animation-delay: 0s, 0s
+            animation-duration: 10s;
+            animation-delay: 0s;
         }
 
-        .snowflake:nth-of-type(1) {
+        .snowflake-wrapper:nth-of-type(2) {
             left: 10%;
-            -webkit-animation-delay: 1s, 1s;
-            animation-delay: 1s, 1s
+            animation-duration: 12s;
+            animation-delay: 1s;
         }
 
-        .snowflake:nth-of-type(2) {
+        .snowflake-wrapper:nth-of-type(3) {
             left: 20%;
-            -webkit-animation-delay: 6s, .5s;
-            animation-delay: 6s, .5s
+            animation-duration: 15s;
+            animation-delay: 6s;
         }
 
-        .snowflake:nth-of-type(3) {
+        .snowflake-wrapper:nth-of-type(4) {
             left: 30%;
-            -webkit-animation-delay: 4s, 2s;
-            animation-delay: 4s, 2s
+            animation-duration: 11s;
+            animation-delay: 4s;
         }
 
-        .snowflake:nth-of-type(4) {
+        .snowflake-wrapper:nth-of-type(5) {
             left: 40%;
-            -webkit-animation-delay: 2s, 2s;
-            animation-delay: 2s, 2s
+            animation-duration: 13s;
+            animation-delay: 2s;
         }
 
-        .snowflake:nth-of-type(5) {
+        .snowflake-wrapper:nth-of-type(6) {
             left: 50%;
-            -webkit-animation-delay: 8s, 3s;
-            animation-delay: 8s, 3s
+            animation-duration: 14s;
+            animation-delay: 8s;
         }
 
-        .snowflake:nth-of-type(6) {
+        .snowflake-wrapper:nth-of-type(7) {
             left: 60%;
-            -webkit-animation-delay: 6s, 2s;
-            animation-delay: 6s, 2s
+            animation-duration: 12s;
+            animation-delay: 6s;
         }
 
-        .snowflake:nth-of-type(7) {
+        .snowflake-wrapper:nth-of-type(8) {
             left: 70%;
-            -webkit-animation-delay: 2.5s, 1s;
-            animation-delay: 2.5s, 1s
+            animation-duration: 15s;
+            animation-delay: 2.5s;
         }
 
-        .snowflake:nth-of-type(8) {
+        .snowflake-wrapper:nth-of-type(9) {
             left: 80%;
-            -webkit-animation-delay: 1s, 0s;
-            animation-delay: 1s, 0s
+            animation-duration: 10s;
+            animation-delay: 1s;
         }
 
-        .snowflake:nth-of-type(9) {
+        .snowflake-wrapper:nth-of-type(10) {
             left: 90%;
-            -webkit-animation-delay: 3s, 1.5s;
-            animation-delay: 3s, 1.5s
+            animation-duration: 13s;
+            animation-delay: 3s;
         }
+
+        /* Delays for Inner (Shaking) - optional variation */
+        .snowflake-wrapper:nth-of-type(1) .snowflake {
+            animation-delay: 0s;
+        }
+
+        .snowflake-wrapper:nth-of-type(2) .snowflake {
+            animation-delay: 1s;
+        }
+
 
         .fade-in {
             animation: fadeIn 0.5s ease-in-out;
@@ -498,16 +478,36 @@
 <body class="flex flex-col h-full">
 
     <div class="snow">
-        <div class="snowflake">❅</div>
-        <div class="snowflake">❅</div>
-        <div class="snowflake">❆</div>
-        <div class="snowflake">❄</div>
-        <div class="snowflake">❅</div>
-        <div class="snowflake">❆</div>
-        <div class="snowflake">❄</div>
-        <div class="snowflake">❅</div>
-        <div class="snowflake">❆</div>
-        <div class="snowflake">❄</div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❅</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❅</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❆</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❄</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❅</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❆</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❄</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❅</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❆</div>
+        </div>
+        <div class="snowflake-wrapper">
+            <div class="snowflake">❄</div>
+        </div>
     </div>
 
     <!-- Main Content (Scrollable) -->
@@ -545,6 +545,50 @@
                 class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 flex items-center gap-2">
                 <span class="text-xl">+</span> Registrer Ferie
             </button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD VIEW (NCD REPLACEMENT) -->
+    <div id="dashboard-view" class="hidden fixed inset-0 bg-gray-900 z-50 flex flex-col text-white font-sans">
+
+        <!-- Comics Grid -->
+        <div id="comic-grid"
+            class="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 overflow-hidden items-center justify-items-center">
+            <!-- Comics will be injected here -->
+            <div class="text-gray-500 animate-pulse">Kobler til NCD...</div>
+        </div>
+
+        <!-- Dashboard Footer -->
+        <div
+            class="h-auto min-h-[120px] bg-black/80 backdrop-blur-md border-t border-white/10 flex flex-col md:flex-row items-center justify-between p-6 gap-6 shrink-0">
+
+            <!-- QR Code -->
+            <div class="flex items-center gap-4">
+                <div id="dash-qrcode" class="bg-white p-2 rounded-lg shadow-lg"></div>
+                <div class="text-left hidden md:block">
+                    <p class="font-bold text-gray-200">Bli med!</p>
+                    <p class="text-xs text-gray-400">Scan for å åpne</p>
+                </div>
+            </div>
+
+            <!-- Quote / Sadserver -->
+            <div class="flex-grow text-center max-w-2xl">
+                <p id="dash-quote" class="text-xl md:text-2xl font-light italic text-gray-300 leading-relaxed">
+                    Loading wisdom...
+                </p>
+            </div>
+
+            <!-- Clock & Status -->
+            <div class="text-right flex flex-col items-end">
+                <div id="dash-clock"
+                    class="text-5xl md:text-6xl font-bold font-mono tracking-widest text-white drop-shadow-md">
+                    00:00
+                </div>
+                <!-- Connection Dot -->
+                <div id="connection-status"
+                    class="w-3 h-3 rounded-full bg-red-500 mt-2 shadow-[0_0_8px_rgba(239,68,68,0.6)] transition-colors duration-500">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -661,10 +705,8 @@
 
     <script>
         window.addEventListener('load', () => {
-            // Hvis du tester lokalt (fil på PC-en), kan mobilen ikke åpne den.
-            // Derfor bruker vi denne linken hvis vi er okalt.
-            // Bytt ut denne med din faktiske nettside-link (fra GitHub eller Firebase)
             const productionUrl = "https://funnyeivske.github.io/holiday-tracker/";
+            const teamsUrl = "https://teams.microsoft.com/l/message/19:ce4a4445-4517-4f4c-81cb-d3b105566f71_f44393be-43d3-4aa0-9261-e22835368ed7@unq.gbl.spaces/1765453701348?context=%7B%22contextType%22%3A%22chat%22%7D";
 
             let targetUrl = window.location.href;
             if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -674,7 +716,10 @@
                 }
             }
 
-            new QRCode(document.getElementById("qrcode"), {
+            const qrContainer = document.getElementById("qrcode");
+
+            // Clean QR generation
+            new QRCode(qrContainer, {
                 text: targetUrl,
                 width: 64,
                 height: 64,
@@ -682,8 +727,162 @@
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
             });
-            applySeasonTheme();
+
+            Dashboard.init(); // Initialize NCD Dashboard
+
+            const season = getSeason();
+            if (!season) {
+                // No holiday: Show Dashboard only
+                startPageRotation(false);
+            } else {
+                // Holiday: Show App
+                startPageRotation(true);
+                applySeasonTheme();
+            }
         });
+
+        // --- Dashboard Logic (NCD Reverse Engineering) ---
+        const Dashboard = {
+            ws: null,
+            reconnectDelay: 5000,
+            clientId: 'hol-tracker-' + Date.now(),
+
+            init: function () {
+                this.startClock();
+                this.connectWS();
+                this.renderQR();
+            },
+
+            startClock: function () {
+                const clockEl = document.getElementById('dash-clock');
+                const update = () => {
+                    const now = new Date();
+                    clockEl.textContent = now.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+                };
+                update();
+                setInterval(update, 1000);
+            },
+
+            renderQR: function () {
+                const qrEl = document.getElementById('dash-qrcode');
+                qrEl.innerHTML = '';
+                // Point to the current page URL so people can open the tracker
+                new QRCode(qrEl, {
+                    text: window.location.href,
+                    width: 80,
+                    height: 80,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.L
+                });
+            },
+
+            connectWS: function () {
+                const protocol = 'wss:';
+                const host = 'ncd.idmedia.no';
+                const url = `${protocol}//${host}/ws/${this.clientId}`;
+
+                console.log('Connecting to NCD WS:', url);
+                this.ws = new WebSocket(url);
+
+                this.ws.onopen = () => {
+                    console.log('NCD WS Connected');
+                    const status = document.getElementById('connection-status');
+                    if (status) {
+                        status.classList.remove('bg-red-500');
+                        status.classList.add('bg-green-500');
+                    }
+                    this.reconnectDelay = 5000;
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.event === 'update') {
+                            this.updateContent(data.data);
+                        }
+                    } catch (e) { console.error('WS Parse Error', e); }
+                };
+
+                this.ws.onclose = () => {
+                    console.log('NCD WS Closed');
+                    this.handleDisconnect();
+                };
+
+                this.ws.onerror = (err) => {
+                    console.error('NCD WS Error', err);
+                    this.handleDisconnect();
+                };
+            },
+
+            handleDisconnect: function () {
+                const status = document.getElementById('connection-status');
+                if (status) {
+                    status.classList.remove('bg-green-500');
+                    status.classList.add('bg-red-500');
+                }
+                setTimeout(() => this.connectWS(), this.reconnectDelay);
+                this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
+            },
+
+            updateContent: function (data) {
+                // Update Quote
+                if (data.quotes && data.quotes.sadserver) {
+                    const quoteEl = document.getElementById('dash-quote');
+                    if (quoteEl) quoteEl.textContent = `"${data.quotes.sadserver}"`;
+                }
+
+                // Update Comics
+                if (data.comics) {
+                    const grid = document.getElementById('comic-grid');
+                    if (!grid) return;
+                    grid.innerHTML = ''; // Clear existing
+
+                    const sources = [
+                        { domain: "vg.no", type: "Lunch" },
+                        { domain: "vg.no", type: "Pappa" },
+                        { domain: "tu.no", type: "Lunch" }
+                    ];
+
+                    sources.forEach(source => {
+                        const domainComics = data.comics[source.domain];
+                        const comicType = (domainComics && domainComics[source.type]) ? source.type : "Lunch";
+
+                        if (domainComics && domainComics[comicType]) {
+                            // Take first valid image
+                            const comicsList = domainComics[comicType].slice(0, 1);
+
+                            comicsList.forEach(imgData => {
+                                const wrapper = document.createElement('div');
+                                wrapper.className = "relative bg-white p-2 rounded-lg shadow-2xl max-h-[50vh] flex items-center justify-center overflow-hidden transform hover:scale-105 transition duration-300";
+
+                                const img = document.createElement('img');
+                                img.src = imgData.url;
+                                img.className = "max-w-full max-h-full object-contain";
+
+                                wrapper.appendChild(img);
+                                grid.appendChild(wrapper);
+                            });
+                        }
+                    });
+                }
+            }
+        };
+
+        // --- Page Logic (Kiosk Mode) ---
+        function startPageRotation(isHoliday) {
+            const dashboard = document.getElementById('dashboard-view');
+
+            if (!isHoliday) {
+                console.log("No holiday season active. Showing Dashboard.");
+                dashboard.classList.remove('hidden');
+                dashboard.classList.add('flex');
+            } else {
+                console.log("Holiday season active! Showing Tracker.");
+                dashboard.classList.add('hidden');
+                dashboard.classList.remove('flex');
+            }
+        }
 
         // --- Seasonal Logic ---
         function getSeason() {
@@ -691,27 +890,28 @@
             const month = date.getMonth(); // 0-11
             const day = date.getDate();
 
-            // Jul: Desember (11) og tidlig Januar (0)
-            if (month === 11 || (month === 0 && day <= 10)) {
+            // Jul: 1. Desember - 5. Januar
+            if (month === 11 || (month === 0 && day <= 5)) {
                 return 'christmas';
             }
-            // Vinter: Januar (etter 10.), Februar (1)
-            if (month === 0 || month === 1) {
+            // Vinterferie (Agder: Uke 8): Ca. 15. Februar - 1. Mars
+            if (month === 1 && day >= 15 && day <= 28) { // Feb 15-28 covers Week 8 mostly
                 return 'winter';
             }
-            // Vår: Mars (2), April (3), Mai (4)
-            if (month >= 2 && month <= 4) {
+            // Påske/Vår: 1. April - 22. April (Varierer, men dekker det meste)
+            if (month === 3 && day <= 22) {
                 return 'spring';
             }
-            // Sommer: Juni (5), Juli (6), August (7)
-            if (month >= 5 && month <= 7) {
+            // Sommer (Skoleferie): ca 20. Juni - 18. August
+            if ((month === 5 && day >= 20) || month === 6 || (month === 7 && day <= 18)) {
                 return 'summer';
             }
-            // Høst: September (8), Oktober (9), November (10)
-            if (month >= 8 && month <= 10) {
+            // Høst (Agder: Uke 40): Ca 28. September - 10. Oktober
+            if ((month === 8 && day >= 28) || (month === 9 && day <= 10)) {
                 return 'autumn';
             }
-            return 'christmas'; // Fallback
+
+            return null; // Ingen ferie
         }
 
         const seasonConfig = {
@@ -767,8 +967,33 @@
             }
         };
 
+        // Manual Toggle with 'X' key
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'x' || e.key === 'X') {
+                console.log("Manual toggle triggered");
+                const dashboard = document.getElementById('dashboard-view');
+                const isDashboardVisible = !dashboard.classList.contains('hidden');
+
+                if (isDashboardVisible) {
+                    // Switch to App
+                    startPageRotation(true);
+                    applySeasonTheme();
+                } else {
+                    // Switch to Dashboard
+                    startPageRotation(false);
+                }
+            }
+        });
+
+
         function applySeasonTheme() {
-            const season = getSeason();
+            let season = getSeason();
+
+            // Fallback if no season but forced to show (defaults to winter or next closest)
+            if (!season) {
+                season = 'winter'; // Default theme for non-holidays
+            }
+
             const config = seasonConfig[season];
             const year = new Date().getFullYear();
 
@@ -782,10 +1007,8 @@
             // Update Subtitle
             const subtitleEl = document.querySelector('header p');
             subtitleEl.textContent = config.subtitle;
-            // Adjust subtitle color for readability depending on BG? 
-            // Current is text-blue-200. Let's make it more generic or theme specific.
-            // For now, let's just keep existing or make it white/black based on contrast.
-            // Simple hack: if summer/spring (light BG), dark text. If winter/xmas (dark BG), light text.
+
+            // Adjust subtitle color
             if (season === 'summer' || season === 'spring' || season === 'autumn') {
                 subtitleEl.classList.remove('text-blue-200');
                 subtitleEl.classList.add('text-gray-800');
@@ -812,8 +1035,6 @@
             }
 
             // Update Default Emoji in Modal
-            // We need to update existing onclick or just re-select
-            // But openModal calls selectEmoji('🎅') hardcoded. We need to fix that function too.
             // We'll override the global openModal to use the config.
             const oldOpenModal = window.openModal;
             window.openModal = function () {
