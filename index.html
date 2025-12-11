@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="no">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juleferie Oversikt - Live</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@400;700&family=Nunito:wght@400;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Config & Init ---
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOcFfiRIw3sgU9eqEbwc1uc_Ur1aTOJXk",
+            authDomain: "ferie-805e0.firebaseapp.com",
+            projectId: "ferie-805e0",
+            storageBucket: "ferie-805e0.firebasestorage.app",
+            messagingSenderId: "621338557882",
+            appId: "1:621338557882:web:9eae6887a484db316d7183",
+            measurementId: "G-C8PT9DKJ3Q"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'holiday-tracker-main'; // Simple static ID for your app's data path
+
+        let currentUser = null;
+        let allEmployees = [];
+        let currentPage = 0;
+        const itemsPerPage = 4;
+        let rotationInterval;
+
+        // Farge-temaer
+        const themes = {
+            red: { bg: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', border: '#dc2626', shadow: 'rgba(220, 38, 38, 0.5)', textMain: 'text-red-900', textSub: 'text-red-700', textAccent: 'text-red-600', badge: 'bg-red-600', label: 'Juleferie' },
+            pink: { bg: 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)', border: '#db2777', shadow: 'rgba(219, 39, 119, 0.5)', textMain: 'text-pink-900', textSub: 'text-pink-700', textAccent: 'text-pink-600', badge: 'bg-pink-600', label: 'Ferie' },
+            blue: { bg: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', border: '#2563eb', shadow: 'rgba(37, 99, 235, 0.5)', textMain: 'text-blue-900', textSub: 'text-blue-700', textAccent: 'text-blue-600', badge: 'bg-blue-600', label: 'Vinterferie' },
+            green: { bg: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', border: '#16a34a', shadow: 'rgba(22, 163, 74, 0.5)', textMain: 'text-green-900', textSub: 'text-green-700', textAccent: 'text-green-600', badge: 'bg-green-600', label: 'Fri' },
+            purple: { bg: 'linear-gradient(135deg, #f3e8ff 0%, #d8b4fe 100%)', border: '#9333ea', shadow: 'rgba(147, 51, 234, 0.5)', textMain: 'text-purple-900', textSub: 'text-purple-700', textAccent: 'text-purple-600', badge: 'bg-purple-600', label: 'Ferie' },
+            orange: { bg: 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)', border: '#ea580c', shadow: 'rgba(234, 88, 12, 0.5)', textMain: 'text-orange-900', textSub: 'text-orange-700', textAccent: 'text-orange-600', badge: 'bg-orange-600', label: 'Solferie' },
+            yellow: { bg: 'linear-gradient(135deg, #fef9c3 0%, #fde047 100%)', border: '#ca8a04', shadow: 'rgba(202, 138, 4, 0.5)', textMain: 'text-yellow-900', textSub: 'text-yellow-700', textAccent: 'text-yellow-600', badge: 'bg-yellow-600', label: 'Fri' },
+            teal: { bg: 'linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%)', border: '#0d9488', shadow: 'rgba(13, 148, 136, 0.5)', textMain: 'text-teal-900', textSub: 'text-teal-700', textAccent: 'text-teal-600', badge: 'bg-teal-600', label: 'Avspasering' },
+        };
+
+        // --- Auth & Data Loading ---
+        async function initApp() {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Auth error", error);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                startListening();
+            }
+        });
+
+        function startListening() {
+            const currentSeason = getSeason();
+            // Store data in a sub-collection named after the season (e.g., 'christmas', 'winter', 'summer')
+            // Path: artifacts/{appId}/public/data/{seasonName}
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', currentSeason));
+
+            onSnapshot(q, (snapshot) => {
+                const employees = [];
+                snapshot.forEach((doc) => {
+                    employees.push({ id: doc.id, ...doc.data() });
+                });
+
+                employees.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+                allEmployees = employees;
+
+                if (allEmployees.length === 0) {
+                    seedInitialData();
+                } else {
+                    renderGrid();
+                    updatePaginationDots();
+                }
+            }, (error) => {
+                console.error("Data fetch error:", error);
+            });
+        }
+
+        async function seedInitialData() {
+            const currentSeason = getSeason();
+            const col = collection(db, 'artifacts', appId, 'public', 'data', currentSeason);
+            await addDoc(col, { name: "Lukas", color: "pink", emoji: "🎅", startDate: "2025-12-10", endDate: "2026-01-04" });
+            await addDoc(col, { name: "Eivind", color: "red", emoji: "🎄", startDate: "2025-12-19", endDate: "2026-01-04" });
+        }
+
+        // --- Rendering Logic ---
+        window.renderGrid = function () {
+            const grid = document.getElementById('employee-grid');
+            grid.innerHTML = '';
+
+            const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
+            if (currentPage >= totalPages) currentPage = 0;
+
+            const start = currentPage * itemsPerPage;
+            const end = start + itemsPerPage;
+            const currentItems = allEmployees.slice(start, end);
+
+            currentItems.forEach(emp => {
+                const card = createCard(emp);
+                grid.appendChild(card);
+            });
+
+            grid.classList.remove('fade-in');
+            void grid.offsetWidth;
+            grid.classList.add('fade-in');
+        }
+
+        function createCard(emp) {
+            const startD = new Date(emp.startDate);
+            const endD = new Date(emp.endDate);
+
+            const formatNB = (date) => {
+                const d = date.getDate();
+                const m = ["Januar", "Februar", "Mars", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Desember"][date.getMonth()];
+                return `${d}. ${m}`;
+            };
+            const getDayNB = (date) => {
+                const days = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
+                return days[date.getDay()];
+            };
+
+            // Bakoverkompatibilitet for gammel data
+            let colorKey = emp.color;
+            if (!colorKey) {
+                // Hvis data mangler 'color', gjett basert på gammel 'type'
+                if (emp.type === 'pink') colorKey = 'pink';
+                else colorKey = 'red';
+            }
+
+            let emoji = emp.emoji;
+            if (!emoji) {
+                emoji = (colorKey === 'pink') ? '🎅' : '🎄';
+            }
+
+            const theme = themes[colorKey] || themes.red;
+
+            const div = document.createElement('div');
+            div.className = `rounded-3xl p-6 relative transform transition duration-300 h-full flex flex-col justify-between`;
+            div.style.background = theme.bg;
+            div.style.border = `4px solid ${theme.border}`;
+            div.style.boxShadow = `0 0 20px ${theme.shadow}`;
+
+            div.innerHTML = `
+                <div class="absolute -top-4 -right-4 ${theme.badge} text-white rounded-full w-14 h-14 flex items-center justify-center text-3xl shadow-lg border-2 border-white">
+                    ${emoji}
+                </div>
+                <div>
+                    <h2 class="text-3xl font-bold ${theme.textMain} mb-1 truncate">${emp.name}</h2>
+                    <p class="text-md ${theme.textSub} font-semibold mb-4 uppercase tracking-wider">${theme.label} / Fri</p>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-white/60 rounded-xl p-3">
+                            <p class="text-xs text-gray-600 uppercase font-bold">Starter:</p>
+                            <p class="text-2xl text-gray-900 font-bold leading-none mt-1">${formatNB(startD)}</p>
+                            <p class="${theme.textAccent} font-medium text-sm">${getDayNB(startD)}</p>
+                        </div>
+                        
+                        <div class="flex justify-center text-xl ${theme.textAccent}">⬇</div>
+                        
+                        <div class="bg-white/60 rounded-xl p-3">
+                            <p class="text-xs text-gray-600 uppercase font-bold">Slutter:</p>
+                            <p class="text-2xl text-gray-900 font-bold leading-none mt-1">${formatNB(endD)}</p>
+                            <p class="${theme.textAccent} font-medium text-sm">${getDayNB(endD)}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-center bg-white/40 rounded-lg p-2">
+                    <p class="${theme.textMain} font-bold text-sm">✨ ${emoji} God Ferie ${emoji} ✨</p>
+                </div>
+                
+                <button onclick="window.deleteItem('${emp.id}')" class="absolute bottom-2 right-2 text-gray-400 hover:text-red-600 opacity-20 hover:opacity-100 transition z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                </button>
+            `;
+            return div;
+        }
+
+        // --- Rotation Logic ---
+        function startRotation() {
+            if (rotationInterval) clearInterval(rotationInterval);
+            rotationInterval = setInterval(() => {
+                const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
+                if (totalPages > 1) {
+                    currentPage++;
+                    if (currentPage >= totalPages) currentPage = 0;
+                    renderGrid();
+                    updatePaginationDots();
+                }
+            }, 10000);
+        }
+
+        startRotation();
+
+        function updatePaginationDots() {
+            const container = document.getElementById('pagination-dots');
+            container.innerHTML = '';
+            const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
+
+            if (totalPages <= 1) return;
+
+            for (let i = 0; i < totalPages; i++) {
+                const dot = document.createElement('div');
+                dot.className = `w-3 h-3 rounded-full mx-1 transition-all duration-300 ${i === currentPage ? 'bg-yellow-400 scale-125' : 'bg-white/30'}`;
+                container.appendChild(dot);
+            }
+        }
+
+        // --- Selection Logic ---
+        window.selectColor = function (color) {
+            document.getElementById('selected-color').value = color;
+            // Oppdater UI
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                if (btn.dataset.color === color) {
+                    btn.classList.add('ring-4', 'ring-offset-2', 'ring-gray-400', 'scale-110');
+                } else {
+                    btn.classList.remove('ring-4', 'ring-offset-2', 'ring-gray-400', 'scale-110');
+                }
+            });
+        }
+
+        window.selectEmoji = function (emoji) {
+            document.getElementById('selected-emoji').value = emoji;
+            // Oppdater UI
+            document.querySelectorAll('.emoji-btn').forEach(btn => {
+                if (btn.dataset.emoji === emoji) {
+                    btn.classList.add('bg-blue-100', 'border-blue-500', 'scale-110');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove('bg-blue-100', 'border-blue-500', 'scale-110');
+                    btn.classList.add('border-transparent');
+                }
+            });
+        }
+
+        // --- Form Handling ---
+        window.openModal = function () {
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+            // Select default
+            window.selectColor('red');
+            window.selectEmoji('🎅');
+        }
+
+        window.closeModal = function () {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+        }
+
+        window.submitForm = async function (e) {
+            e.preventDefault();
+            const name = document.getElementById('input-name').value;
+            const color = document.getElementById('selected-color').value;
+            const emoji = document.getElementById('selected-emoji').value;
+            const startDate = document.getElementById('input-start').value;
+            const endDate = document.getElementById('input-end').value;
+
+            if (!name || !startDate || !endDate) return;
+
+            const btn = document.getElementById('submit-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "Lagrer...";
+            btn.disabled = true;
+
+            try {
+                const currentSeason = getSeason();
+                const col = collection(db, 'artifacts', appId, 'public', 'data', currentSeason);
+                await addDoc(col, { name, color, emoji, startDate, endDate });
+                closeModal();
+                document.getElementById('vacation-form').reset();
+            } catch (err) {
+                alert("Kunne ikke lagre: " + err.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        window.deleteItem = async function (id) {
+            if (confirm("Slette denne oppføringen?")) {
+                const currentSeason = getSeason();
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentSeason, id));
+            }
+        }
+
+        initApp();
+
+    </script>
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: radial-gradient(circle at center, #2d3748 0%, #1a202c 100%);
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .christmas-font {
+            font-family: 'Mountains of Christmas', cursive;
+        }
+
+        .snow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .snowflake {
+            color: #fff;
+            font-size: 1em;
+            font-family: Arial;
+            text-shadow: 0 0 1px #000;
+        }
+
+        @-webkit-keyframes snowflakes-fall {
+            0% {
+                top: -10%
+            }
+
+            100% {
+                top: 100%
+            }
+        }
+
+        @-webkit-keyframes snowflakes-shake {
+            0% {
+                -webkit-transform: translateX(0px);
+                transform: translateX(0px)
+            }
+
+            50% {
+                -webkit-transform: translateX(80px);
+                transform: translateX(80px)
+            }
+
+            100% {
+                -webkit-transform: translateX(0px);
+                transform: translateX(0px)
+            }
+        }
+
+        @keyframes snowflakes-fall {
+            0% {
+                top: -10%
+            }
+
+            100% {
+                top: 100%
+            }
+        }
+
+        @keyframes snowflakes-shake {
+            0% {
+                transform: translateX(0px)
+            }
+
+            50% {
+                transform: translateX(80px)
+            }
+
+            100% {
+                transform: translateX(0px)
+            }
+        }
+
+        .snowflake {
+            position: fixed;
+            top: -10%;
+            z-index: 9999;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            cursor: default;
+            -webkit-animation-name: snowflakes-fall, snowflakes-shake;
+            -webkit-animation-duration: 10s, 3s;
+            -webkit-animation-timing-function: linear, ease-in-out;
+            -webkit-animation-iteration-count: infinite, infinite;
+            -webkit-animation-play-state: running, running;
+            animation-name: snowflakes-fall, snowflakes-shake;
+            animation-duration: 10s, 3s;
+            animation-timing-function: linear, ease-in-out;
+            animation-iteration-count: infinite, infinite;
+            animation-play-state: running, running
+        }
+
+        .snowflake:nth-of-type(0) {
+            left: 1%;
+            -webkit-animation-delay: 0s, 0s;
+            animation-delay: 0s, 0s
+        }
+
+        .snowflake:nth-of-type(1) {
+            left: 10%;
+            -webkit-animation-delay: 1s, 1s;
+            animation-delay: 1s, 1s
+        }
+
+        .snowflake:nth-of-type(2) {
+            left: 20%;
+            -webkit-animation-delay: 6s, .5s;
+            animation-delay: 6s, .5s
+        }
+
+        .snowflake:nth-of-type(3) {
+            left: 30%;
+            -webkit-animation-delay: 4s, 2s;
+            animation-delay: 4s, 2s
+        }
+
+        .snowflake:nth-of-type(4) {
+            left: 40%;
+            -webkit-animation-delay: 2s, 2s;
+            animation-delay: 2s, 2s
+        }
+
+        .snowflake:nth-of-type(5) {
+            left: 50%;
+            -webkit-animation-delay: 8s, 3s;
+            animation-delay: 8s, 3s
+        }
+
+        .snowflake:nth-of-type(6) {
+            left: 60%;
+            -webkit-animation-delay: 6s, 2s;
+            animation-delay: 6s, 2s
+        }
+
+        .snowflake:nth-of-type(7) {
+            left: 70%;
+            -webkit-animation-delay: 2.5s, 1s;
+            animation-delay: 2.5s, 1s
+        }
+
+        .snowflake:nth-of-type(8) {
+            left: 80%;
+            -webkit-animation-delay: 1s, 0s;
+            animation-delay: 1s, 0s
+        }
+
+        .snowflake:nth-of-type(9) {
+            left: 90%;
+            -webkit-animation-delay: 3s, 1.5s;
+            animation-delay: 3s, 1.5s
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Skjul scrollbar i emoji-velgeren */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col h-full">
+
+    <div class="snow">
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+    </div>
+
+    <!-- Main Content (Scrollable) -->
+    <div
+        class="flex-grow flex flex-col items-center justify-center p-4 pb-32 relative z-10 w-full max-w-7xl mx-auto overflow-y-auto h-full scrollbar-hide">
+
+        <header class="text-center mb-8 shrink-0">
+            <h1 class="text-5xl md:text-6xl text-yellow-300 christmas-font drop-shadow-lg font-bold">
+                🎄 Juleferie 2025 🎄
+            </h1>
+            <p class="text-blue-200 mt-2 text-lg">God jul til hele gjengen!</p>
+        </header>
+
+        <div id="employee-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full fade-in shrink-0">
+            <div class="col-span-full text-center text-white/50 animate-pulse">Laster ferieoversikt...</div>
+        </div>
+
+        <div id="pagination-dots" class="flex justify-center mt-6 h-4 shrink-0"></div>
+
+    </div>
+
+    <!-- Footer (Fixed Bottom) -->
+    <div class="fixed bottom-0 left-0 right-0 z-40 bg-black/60 backdrop-blur-md w-full p-4 border-t border-white/10">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+
+            <div class="flex items-center gap-4">
+                <div id="qrcode" class="bg-white p-2 rounded-lg"></div>
+                <div class="text-white">
+                    <p class="font-bold text-lg">Legg til din ferie!</p>
+                    <p class="text-sm text-gray-300">Scan koden eller trykk på knappen</p>
+                </div>
+            </div>
+
+            <button onclick="openModal()"
+                class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 flex items-center gap-2">
+                <span class="text-xl">+</span> Registrer Ferie
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL FOR REGISTRERING -->
+    <div id="modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div
+            class="bg-white rounded-2xl w-full max-w-lg p-6 relative shadow-2xl border-4 border-blue-200 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">🎅 Når tar du ferie?</h2>
+
+            <form id="vacation-form" onsubmit="submitForm(event)" class="space-y-6">
+                <!-- Navn -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Ditt Navn</label>
+                    <input type="text" id="input-name" required placeholder="F.eks. Kari Nordmann"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+
+                <!-- Fargevelger -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Velg din stil</label>
+                    <input type="hidden" id="selected-color" value="red">
+                    <div class="flex flex-wrap gap-3 justify-center">
+                        <button type="button" data-color="red" onclick="selectColor('red')"
+                            class="color-btn w-10 h-10 rounded-full bg-red-500 shadow-md hover:scale-110 transition"></button>
+                        <button type="button" data-color="pink" onclick="selectColor('pink')"
+                            class="color-btn w-10 h-10 rounded-full bg-pink-500 shadow-md hover:scale-110 transition"></button>
+                        <button type="button" data-color="blue" onclick="selectColor('blue')"
+                            class="color-btn w-10 h-10 rounded-full bg-blue-500 shadow-md hover:scale-110 transition"></button>
+                        <button type="button" data-color="green" onclick="selectColor('green')"
+                            class="color-btn w-10 h-10 rounded-full bg-green-500 shadow-md hover:scale-110 transition"></button>
+                        <button type="button" data-color="purple" onclick="selectColor('purple')"
+                            class="color-btn w-10 h-10 rounded-full bg-purple-500 shadow-md hover:scale-110 transition"></button>
+                        <button type="button" data-color="orange" onclick="selectColor('orange')"
+                            class="color-btn w-10 h-10 rounded-full bg-orange-500 shadow-md hover:scale-110 transition"></button>
+                        <button type="button" data-color="yellow" onclick="selectColor('yellow')"
+                            class="color-btn w-10 h-10 rounded-full bg-yellow-400 shadow-md hover:scale-110 transition"></button>
+                        <button type="button" data-color="teal" onclick="selectColor('teal')"
+                            class="color-btn w-10 h-10 rounded-full bg-teal-500 shadow-md hover:scale-110 transition"></button>
+                    </div>
+                </div>
+
+                <!-- Emoji Velger -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Velg ikon</label>
+                    <input type="hidden" id="selected-emoji" value="🎅">
+                    <div class="grid grid-cols-6 gap-2">
+                        <button type="button" data-emoji="🎅" onclick="selectEmoji('🎅')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎅</button>
+                        <button type="button" data-emoji="🎄" onclick="selectEmoji('🎄')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎄</button>
+                        <button type="button" data-emoji="❄️" onclick="selectEmoji('❄️')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">❄️</button>
+                        <button type="button" data-emoji="🎁" onclick="selectEmoji('🎁')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎁</button>
+                        <button type="button" data-emoji="⛷️" onclick="selectEmoji('⛷️')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">⛷️</button>
+                        <button type="button" data-emoji="🏂" onclick="selectEmoji('🏂')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🏂</button>
+                        <button type="button" data-emoji="🏖️" onclick="selectEmoji('🏖️')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🏖️</button>
+                        <button type="button" data-emoji="✈️" onclick="selectEmoji('✈️')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">✈️</button>
+                        <button type="button" data-emoji="🎮" onclick="selectEmoji('🎮')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎮</button>
+                        <button type="button" data-emoji="🍷" onclick="selectEmoji('🍷')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🍷</button>
+                        <button type="button" data-emoji="💤" onclick="selectEmoji('💤')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">💤</button>
+                        <button type="button" data-emoji="🕯️" onclick="selectEmoji('🕯️')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🕯️</button>
+                        <button type="button" data-emoji="☃️" onclick="selectEmoji('☃️')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">☃️</button>
+                        <button type="button" data-emoji="🦌" onclick="selectEmoji('🦌')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🦌</button>
+                        <button type="button" data-emoji="🌟" onclick="selectEmoji('🌟')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🌟</button>
+                        <button type="button" data-emoji="🐕" onclick="selectEmoji('🐕')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🐕</button>
+                        <button type="button" data-emoji="🏠" onclick="selectEmoji('🏠')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🏠</button>
+                        <button type="button" data-emoji="💻" onclick="selectEmoji('💻')"
+                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">💻</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Startdato</label>
+                        <input type="date" id="input-start" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Sluttdato</label>
+                        <input type="date" id="input-end" required
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn"
+                    class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg mt-4 shadow transition">
+                    Lagre Ferie
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            // Hvis du tester lokalt (fil på PC-en), kan mobilen ikke åpne den.
+            // Derfor bruker vi denne linken hvis vi er okalt.
+            // Bytt ut denne med din faktiske nettside-link (fra GitHub eller Firebase)
+            const productionUrl = "https://funnyeivske.github.io/holiday-tracker/";
+
+            let targetUrl = window.location.href;
+            if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (productionUrl) {
+                    targetUrl = productionUrl;
+                    console.log("Local development detected. QR Code pointing to:", targetUrl);
+                }
+            }
+
+            new QRCode(document.getElementById("qrcode"), {
+                text: targetUrl,
+                width: 64,
+                height: 64,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            applySeasonTheme();
+        });
+
+        // --- Seasonal Logic ---
+        function getSeason() {
+            const date = new Date();
+            const month = date.getMonth(); // 0-11
+            const day = date.getDate();
+
+            // Jul: Desember (11) og tidlig Januar (0)
+            if (month === 11 || (month === 0 && day <= 10)) {
+                return 'christmas';
+            }
+            // Vinter: Januar (etter 10.), Februar (1)
+            if (month === 0 || month === 1) {
+                return 'winter';
+            }
+            // Vår: Mars (2), April (3), Mai (4)
+            if (month >= 2 && month <= 4) {
+                return 'spring';
+            }
+            // Sommer: Juni (5), Juli (6), August (7)
+            if (month >= 5 && month <= 7) {
+                return 'summer';
+            }
+            // Høst: September (8), Oktober (9), November (10)
+            if (month >= 8 && month <= 10) {
+                return 'autumn';
+            }
+            return 'christmas'; // Fallback
+        }
+
+        const seasonConfig = {
+            christmas: {
+                title: "Juleferie",
+                titleEmoji: "🎄",
+                subtitle: "God jul til hele gjengen!",
+                bg: "radial-gradient(circle at center, #2d3748 0%, #1a202c 100%)",
+                headerColor: "text-yellow-300",
+                font: "christmas-font",
+                snow: true,
+                defaultEmoji: "🎅"
+            },
+            winter: {
+                title: "Vinterferie",
+                titleEmoji: "⛷️",
+                subtitle: "God vinterferie! Husk kakao!",
+                bg: "radial-gradient(circle at center, #e0f2fe 0%, #0284c7 100%)", // Light blue to blue
+                headerColor: "text-white",
+                font: "font-sans", // Fallback to Nunito/Standard
+                snow: true,
+                defaultEmoji: "⛷️"
+            },
+            spring: {
+                title: "Vårferie",
+                titleEmoji: "🌱",
+                subtitle: "Nyt våren og fridagene!",
+                bg: "radial-gradient(circle at center, #dcfce7 0%, #16a34a 100%)", // Light green to green
+                headerColor: "text-green-900",
+                font: "font-sans",
+                snow: false,
+                defaultEmoji: "🌱"
+            },
+            summer: {
+                title: "Sommerferie",
+                titleEmoji: "☀️",
+                subtitle: "God sommer! Nyt solen!",
+                bg: "radial-gradient(circle at center, #fef9c3 0%, #eab308 100%)", // Light yellow to yellow
+                headerColor: "text-orange-600",
+                font: "font-sans",
+                snow: false,
+                defaultEmoji: "🏖️"
+            },
+            autumn: {
+                title: "Høstferie",
+                titleEmoji: "🍂",
+                subtitle: "God høstferie! Ut på tur!",
+                bg: "radial-gradient(circle at center, #ffedd5 0%, #c2410c 100%)", // Orange to rust
+                headerColor: "text-red-900",
+                font: "font-sans",
+                snow: false,
+                defaultEmoji: "🍂"
+            }
+        };
+
+        function applySeasonTheme() {
+            const season = getSeason();
+            const config = seasonConfig[season];
+            const year = new Date().getFullYear();
+
+            // Update Title (Emoji on both sides)
+            const titleEl = document.querySelector('header h1');
+            titleEl.textContent = `${config.titleEmoji} ${config.title} ${year} ${config.titleEmoji}`;
+
+            // Remove old specific font/color classes and add new ones
+            titleEl.className = `text-5xl md:text-6xl drop-shadow-lg font-bold ${config.headerColor} ${config.font}`;
+
+            // Update Subtitle
+            const subtitleEl = document.querySelector('header p');
+            subtitleEl.textContent = config.subtitle;
+            // Adjust subtitle color for readability depending on BG? 
+            // Current is text-blue-200. Let's make it more generic or theme specific.
+            // For now, let's just keep existing or make it white/black based on contrast.
+            // Simple hack: if summer/spring (light BG), dark text. If winter/xmas (dark BG), light text.
+            if (season === 'summer' || season === 'spring' || season === 'autumn') {
+                subtitleEl.classList.remove('text-blue-200');
+                subtitleEl.classList.add('text-gray-800');
+            } else {
+                subtitleEl.classList.add('text-blue-200');
+                subtitleEl.classList.remove('text-gray-800');
+            }
+
+            // Update Background
+            document.body.style.background = config.bg;
+
+            // Update Snow
+            const snowDiv = document.querySelector('.snow');
+            if (config.snow) {
+                snowDiv.style.display = 'block';
+            } else {
+                snowDiv.style.display = 'none';
+            }
+
+            // Update Modal Header Emoji
+            const modalHeader = document.querySelector('#modal h2');
+            if (modalHeader) {
+                modalHeader.textContent = `${config.defaultEmoji} Når tar du ferie?`;
+            }
+
+            // Update Default Emoji in Modal
+            // We need to update existing onclick or just re-select
+            // But openModal calls selectEmoji('🎅') hardcoded. We need to fix that function too.
+            // We'll override the global openModal to use the config.
+            const oldOpenModal = window.openModal;
+            window.openModal = function () {
+                document.getElementById('modal').classList.remove('hidden');
+                document.getElementById('modal').classList.add('flex');
+                window.selectColor('red'); // Keep red or maybe rotate?
+                window.selectEmoji(config.defaultEmoji);
+            }
+        }
+
+    </script>
+</body>
+
+</html>
