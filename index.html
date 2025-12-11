@@ -844,9 +844,17 @@
         });
 
         // --- Canvas Snow Effect (Performance Optimized) ---
+        let snowFrameId = null;
+
         function startSnowEffect() {
             const canvas = document.getElementById('snow-canvas');
             if (!canvas) return;
+
+            // Prevent stacking loops - STOP existing animation before starting new
+            if (snowFrameId) {
+                cancelAnimationFrame(snowFrameId);
+                snowFrameId = null;
+            }
 
             canvas.classList.remove('hidden');
             const ctx = canvas.getContext('2d');
@@ -880,7 +888,7 @@
                 }
                 ctx.fill();
                 update();
-                requestAnimationFrame(draw);
+                snowFrameId = requestAnimationFrame(draw);
             }
 
             function update() {
@@ -895,12 +903,15 @@
                 }
             }
 
-            window.addEventListener('resize', () => {
+            // Clean up old listener to prevent duplicates (optional but good practice)
+            const oldResize = window.onresize;
+            window.onresize = () => {
+                if (oldResize) oldResize();
                 width = window.innerWidth;
                 height = window.innerHeight;
                 canvas.width = width;
                 canvas.height = height;
-            });
+            };
 
             draw();
         }
@@ -945,6 +956,11 @@
                 if (snowCanvas) startSnowEffect();
             } else {
                 if (snowCanvas) snowCanvas.classList.add('hidden');
+                // Stop the loop if it's running
+                if (snowFrameId) {
+                    cancelAnimationFrame(snowFrameId);
+                    snowFrameId = null;
+                }
             }
 
             // Update Modal Header Emoji
