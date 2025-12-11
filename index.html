@@ -99,12 +99,7 @@
             });
         }
 
-        async function seedInitialData() {
-            const currentSeason = getSeason();
-            const col = collection(db, 'artifacts', appId, 'public', 'data', currentSeason);
-            await addDoc(col, { name: "Lukas", color: "pink", emoji: "🎅", startDate: "2025-12-10", endDate: "2026-01-04" });
-            await addDoc(col, { name: "Eivind", color: "red", emoji: "🎄", startDate: "2025-12-19", endDate: "2026-01-04" });
-        }
+
 
         // --- Rendering Logic ---
         window.renderGrid = function () {
