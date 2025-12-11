@@ -326,133 +326,7 @@
             font-family: 'Mountains of Christmas', cursive;
         }
 
-        .snow {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 1;
-        }
 
-        .snowflake-wrapper {
-            position: fixed;
-            top: -10vh;
-            z-index: 9999;
-            pointer-events: none;
-            will-change: transform;
-            animation-name: snowflakes-fall;
-            animation-timing-function: linear;
-            animation-iteration-count: infinite;
-        }
-
-        .snowflake {
-            color: #fff;
-            font-size: 1.5em;
-            /* Større snø */
-            font-family: Arial;
-            /* text-shadow: removed for perf */
-            will-change: transform;
-            animation-name: snowflakes-shake;
-            animation-duration: 3s;
-            animation-timing-function: ease-in-out;
-            animation-iteration-count: infinite;
-        }
-
-        @keyframes snowflakes-fall {
-            0% {
-                transform: translateY(0);
-            }
-
-            100% {
-                transform: translateY(110vh);
-            }
-        }
-
-        @keyframes snowflakes-shake {
-            0% {
-                transform: translateX(0px);
-            }
-
-            50% {
-                transform: translateX(80px);
-            }
-
-            100% {
-                transform: translateX(0px);
-            }
-        }
-
-        /* Delays for Wrappers (Falling) */
-        .snowflake-wrapper:nth-of-type(1) {
-            left: 1%;
-            animation-duration: 10s;
-            animation-delay: 0s;
-        }
-
-        .snowflake-wrapper:nth-of-type(2) {
-            left: 10%;
-            animation-duration: 12s;
-            animation-delay: 1s;
-        }
-
-        .snowflake-wrapper:nth-of-type(3) {
-            left: 20%;
-            animation-duration: 15s;
-            animation-delay: 6s;
-        }
-
-        .snowflake-wrapper:nth-of-type(4) {
-            left: 30%;
-            animation-duration: 11s;
-            animation-delay: 4s;
-        }
-
-        .snowflake-wrapper:nth-of-type(5) {
-            left: 40%;
-            animation-duration: 13s;
-            animation-delay: 2s;
-        }
-
-        .snowflake-wrapper:nth-of-type(6) {
-            left: 50%;
-            animation-duration: 14s;
-            animation-delay: 8s;
-        }
-
-        .snowflake-wrapper:nth-of-type(7) {
-            left: 60%;
-            animation-duration: 12s;
-            animation-delay: 6s;
-        }
-
-        .snowflake-wrapper:nth-of-type(8) {
-            left: 70%;
-            animation-duration: 15s;
-            animation-delay: 2.5s;
-        }
-
-        .snowflake-wrapper:nth-of-type(9) {
-            left: 80%;
-            animation-duration: 10s;
-            animation-delay: 1s;
-        }
-
-        .snowflake-wrapper:nth-of-type(10) {
-            left: 90%;
-            animation-duration: 13s;
-            animation-delay: 3s;
-        }
-
-        /* Delays for Inner (Shaking) - optional variation */
-        .snowflake-wrapper:nth-of-type(1) .snowflake {
-            animation-delay: 0s;
-        }
-
-        .snowflake-wrapper:nth-of-type(2) .snowflake {
-            animation-delay: 1s;
-        }
 
 
         .fade-in {
@@ -485,38 +359,7 @@
 
 <body class="flex flex-col h-full">
 
-    <div class="snow">
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❅</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❅</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❆</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❄</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❅</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❆</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❄</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❅</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❆</div>
-        </div>
-        <div class="snowflake-wrapper">
-            <div class="snowflake">❄</div>
-        </div>
-    </div>
+    <canvas id="snow-canvas" class="fixed inset-0 pointer-events-none z-10 hidden"></canvas>
 
     <!-- Main Content (Scrollable) -->
     <div
@@ -772,7 +615,6 @@
             renderQR: function () {
                 const qrEl = document.getElementById('dash-qrcode');
                 qrEl.innerHTML = '';
-                // Point to the current page URL so people can open the tracker
                 new QRCode(qrEl, {
                     text: window.location.href,
                     width: 80,
@@ -1000,6 +842,67 @@
             }
         });
 
+        // --- Canvas Snow Effect (Performance Optimized) ---
+        function startSnowEffect() {
+            const canvas = document.getElementById('snow-canvas');
+            if (!canvas) return;
+
+            canvas.classList.remove('hidden');
+            const ctx = canvas.getContext('2d');
+
+            let width = window.innerWidth;
+            let height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            const snowflakes = [];
+            const count = 50; // Optimized count for low-end devices
+
+            for (let i = 0; i < count; i++) {
+                snowflakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    r: Math.random() * 3 + 1,
+                    d: Math.random() * count,
+                    speed: Math.random() * 0.5 + 0.2 // Slow, relaxing speed
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = "rgba(236, 239, 244, 0.8)"; // Nord Snow Storm
+                ctx.beginPath();
+                for (let i = 0; i < count; i++) {
+                    const f = snowflakes[i];
+                    ctx.moveTo(f.x, f.y);
+                    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
+                }
+                ctx.fill();
+                update();
+                requestAnimationFrame(draw);
+            }
+
+            function update() {
+                for (let i = 0; i < count; i++) {
+                    const f = snowflakes[i];
+                    f.y += f.speed;
+                    f.x += Math.sin(f.d) * 0.5; // Gentle sway
+
+                    if (f.y > height) {
+                        snowflakes[i] = { x: Math.random() * width, y: -10, r: f.r, d: f.d, speed: f.speed };
+                    }
+                }
+            }
+
+            window.addEventListener('resize', () => {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            });
+
+            draw();
+        }
 
         function applySeasonTheme() {
             let season = getSeason();
@@ -1032,15 +935,15 @@
                 subtitleEl.classList.remove('text-gray-800');
             }
 
-            // Update Background
+            // Update Background (Nord Theme is default, but config.bg might override or match)
             document.body.style.background = config.bg;
 
-            // Update Snow
-            const snowDiv = document.querySelector('.snow');
+            // Update Snow (Canvas)
+            const snowCanvas = document.getElementById('snow-canvas');
             if (config.snow) {
-                snowDiv.style.display = 'block';
+                if (snowCanvas) startSnowEffect();
             } else {
-                snowDiv.style.display = 'none';
+                if (snowCanvas) snowCanvas.classList.add('hidden');
             }
 
             // Update Modal Header Emoji
@@ -1055,7 +958,7 @@
             window.openModal = function () {
                 document.getElementById('modal').classList.remove('hidden');
                 document.getElementById('modal').classList.add('flex');
-                window.selectColor('red'); // Keep red or maybe rotate?
+                window.selectColor('red');
                 window.selectEmoji(config.defaultEmoji);
             }
         }
@@ -1064,3 +967,377 @@
 </body>
 
 </html>
+const url = `${protocol}//${host}/ws/${this.clientId}`;
+
+console.log('Connecting to NCD WS:', url);
+this.ws = new WebSocket(url);
+
+this.ws.onopen = () => {
+console.log('NCD WS Connected');
+const status = document.getElementById('connection-status');
+if (status) {
+status.classList.remove('bg-red-500');
+status.classList.add('bg-green-500');
+status.style.boxShadow = "0 0 8px rgba(34, 197, 94, 0.6)"; // Green glow
+}
+this.reconnectDelay = 5000;
+};
+
+this.ws.onmessage = (event) => {
+try {
+const data = JSON.parse(event.data);
+if (data.event === 'update') {
+this.updateContent(data.data);
+}
+} catch (e) { console.error('WS Parse Error', e); }
+};
+
+this.ws.onclose = () => {
+console.log('NCD WS Closed');
+this.handleDisconnect();
+};
+
+this.ws.onerror = (err) => {
+console.error('NCD WS Error', err);
+this.handleDisconnect();
+};
+},
+
+handleDisconnect: function () {
+const status = document.getElementById('connection-status');
+if (status) {
+status.classList.remove('bg-green-500');
+status.classList.add('bg-red-500');
+status.style.boxShadow = "0 0 8px rgba(239, 68, 68, 0.6)"; // Red glow
+}
+setTimeout(() => this.connectWS(), this.reconnectDelay);
+this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
+},
+
+updateContent: function (data) {
+// Update Quote
+if (data.quotes && data.quotes.sadserver) {
+const quoteEl = document.getElementById('dash-quote');
+if (quoteEl) quoteEl.textContent = `"${data.quotes.sadserver}"`;
+}
+
+// Update Comics
+if (data.comics) {
+const grid = document.getElementById('comic-grid');
+if (!grid) return;
+grid.innerHTML = ''; // Clear existing
+
+const sources = [
+{ domain: "vg.no", type: "Lunch" },
+{ domain: "vg.no", type: "Pappa" },
+{ domain: "tu.no", type: "Lunch" }
+];
+
+sources.forEach(source => {
+const domainComics = data.comics[source.domain];
+const comicType = (domainComics && domainComics[source.type]) ? source.type : "Lunch";
+
+if (domainComics && domainComics[comicType]) {
+// Take first 2 valid images to fill 6 slots (3 sources * 2)
+const comicsList = domainComics[comicType].slice(0, 2);
+
+comicsList.forEach(imgData => {
+const wrapper = document.createElement('div');
+// Nord Theme Card: Nord1 Background, Nord3 Border
+wrapper.className = "w-full h-auto bg-[#3b4252]/50 rounded-lg shadow-sm border border-[#4c566a] hover:border-[#88c0d0]
+transition-colors flex items-center justify-center p-2";
+
+const img = document.createElement('img');
+// Fix relative URLs
+let src = imgData.url;
+if (src.startsWith('/')) {
+src = 'https://ncd.idmedia.no' + src;
+}
+img.src = src;
+// Full visibility, no clipping
+img.className = "w-full h-auto object-contain";
+
+wrapper.appendChild(img);
+grid.appendChild(wrapper);
+});
+}
+});
+}
+}
+};
+
+// --- Page Logic (Kiosk Mode) ---
+function startPageRotation(isHoliday) {
+const dashboard = document.getElementById('dashboard-view');
+
+if (!isHoliday) {
+console.log("No holiday season active. Showing Dashboard.");
+dashboard.classList.remove('hidden');
+dashboard.classList.add('flex');
+} else {
+console.log("Holiday season active! Showing Tracker.");
+dashboard.classList.add('hidden');
+dashboard.classList.remove('flex');
+}
+}
+
+// --- Seasonal Logic ---
+function getSeason() {
+const date = new Date();
+const month = date.getMonth(); // 0-11
+const day = date.getDate();
+
+// Jul: 1. Desember - 5. Januar
+if (month === 11 || (month === 0 && day <= 5)) { return 'christmas' ; } // Vinterferie (Agder: Uke 8): Ca. 15. Februar -
+    1. Mars if (month===1 && day>= 15 && day <= 28) { // Feb 15-28 covers Week 8 mostly return 'winter' ; } //
+        Påske/Vår: 1. April - 22. April (Varierer, men dekker det meste) if (month===3 && day <=22) { return 'spring' ;
+        } // Sommer (Skoleferie): ca 20. Juni - 18. August if ((month===5 && day>= 20) || month === 6 || (month === 7 &&
+        day <= 18)) { return 'summer' ; } // Høst (Agder: Uke 40): Ca 28. September - 10. Oktober if ((month===8 && day>
+            = 28) || (month === 9 && day <= 10)) { return 'autumn' ; } return null; // Ingen ferie } const
+                seasonConfig={ christmas: { title: "Juleferie" , titleEmoji: "🎄" ,
+                subtitle: "God jul til hele gjengen!" ,
+                bg: "radial-gradient(circle at center, #2d3748 0%, #1a202c 100%)" , headerColor: "text-yellow-300" ,
+                font: "christmas-font" , snow: true, defaultEmoji: "🎅" }, winter: { title: "Vinterferie" ,
+                titleEmoji: "⛷️" , subtitle: "God vinterferie! Husk kakao!" ,
+                bg: "radial-gradient(circle at center, #e0f2fe 0%, #0284c7 100%)" , // Light blue to blue
+                headerColor: "text-white" , font: "font-sans" , // Fallback to Nunito/Standard snow: true,
+                defaultEmoji: "⛷️" }, spring: { title: "Vårferie" , titleEmoji: "🌱" ,
+                subtitle: "Nyt våren og fridagene!" , bg: "radial-gradient(circle at center, #dcfce7 0%, #16a34a 100%)"
+                , // Light green to green headerColor: "text-green-900" , font: "font-sans" , snow: false,
+                defaultEmoji: "🌱" }, summer: { title: "Sommerferie" , titleEmoji: "☀️" ,
+                subtitle: "God sommer! Nyt solen!" , bg: "radial-gradient(circle at center, #fef9c3 0%, #eab308 100%)" ,
+                // Light yellow to yellow headerColor: "text-orange-600" , font: "font-sans" , snow: false,
+                defaultEmoji: "🏖️" }, autumn: { title: "Høstferie" , titleEmoji: "🍂" ,
+                subtitle: "God høstferie! Ut på tur!" ,
+                bg: "radial-gradient(circle at center, #ffedd5 0%, #c2410c 100%)" , // Orange to rust
+                headerColor: "text-red-900" , font: "font-sans" , snow: false, defaultEmoji: "🍂" } }; // Manual Toggle
+                with 'X' key window.addEventListener('keydown', (e)=> {
+                if (e.key === 'x' || e.key === 'X') {
+                console.log("Manual toggle triggered");
+                const dashboard = document.getElementById('dashboard-view');
+                const isDashboardVisible = !dashboard.classList.contains('hidden');
+
+                if (isDashboardVisible) {
+                // Switch to App
+                startPageRotation(true);
+                applySeasonTheme();
+                } else {
+                // Switch to Dashboard
+                startPageRotation(false);
+                }
+                }
+                });
+
+
+                function applySeasonTheme() {
+                let season = getSeason();
+
+                // Fallback if no season but forced to show (defaults to winter or next closest)
+                if (!season) {
+                season = 'winter'; // Default theme for non-holidays
+                }
+
+                const config = seasonConfig[season];
+                const year = new Date().getFullYear();
+
+                // Update Title (Emoji on both sides)
+                const titleEl = document.querySelector('header h1');
+                titleEl.textContent = `${config.titleEmoji} ${config.title} ${year} ${config.titleEmoji}`;
+
+                // Remove old specific font/color classes and add new ones
+                titleEl.className = `text-5xl md:text-6xl drop-shadow-lg font-bold ${config.headerColor}
+                ${config.font}`;
+
+                // Update Subtitle
+                const subtitleEl = document.querySelector('header p');
+                subtitleEl.textContent = config.subtitle;
+                status.style.boxShadow = "0 0 8px rgba(239, 68, 68, 0.6)"; // Red glow
+                }
+                setTimeout(() => this.connectWS(), this.reconnectDelay);
+                this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
+                },
+
+                updateContent: function (data) {
+                // Update Quote
+                if (data.quotes && data.quotes.sadserver) {
+                const quoteEl = document.getElementById('dash-quote');
+                if (quoteEl) quoteEl.textContent = `"${data.quotes.sadserver}"`;
+                }
+
+                // Update Comics
+                if (data.comics) {
+                const grid = document.getElementById('comic-grid');
+                if (!grid) return;
+                grid.innerHTML = ''; // Clear existing
+
+                const sources = [
+                { domain: "vg.no", type: "Lunch" },
+                { domain: "vg.no", type: "Pappa" },
+                { domain: "tu.no", type: "Lunch" }
+                ];
+
+                sources.forEach(source => {
+                const domainComics = data.comics[source.domain];
+                const comicType = (domainComics && domainComics[source.type]) ? source.type : "Lunch";
+
+                if (domainComics && domainComics[comicType]) {
+                // Take first 2 valid images to fill 6 slots (3 sources * 2)
+                const comicsList = domainComics[comicType].slice(0, 2);
+
+                comicsList.forEach(imgData => {
+                const wrapper = document.createElement('div');
+                // Nord Theme Card: Nord1 Background, Nord3 Border
+                wrapper.className = "w-full h-auto bg-[#3b4252]/50 rounded-lg shadow-sm border border-[#4c566a]
+                hover:border-[#88c0d0] transition-colors flex items-center justify-center p-2";
+
+                const img = document.createElement('img');
+                // Fix relative URLs
+                let src = imgData.url;
+                if (src.startsWith('/')) {
+                src = 'https://ncd.idmedia.no' + src;
+                }
+                img.src = src;
+                // Full visibility, no clipping
+                img.className = "w-full h-auto object-contain";
+
+                wrapper.appendChild(img);
+                grid.appendChild(wrapper);
+                });
+                }
+                });
+                }
+                }
+                };
+
+                // --- Page Logic (Kiosk Mode) ---
+                function startPageRotation(isHoliday) {
+                const dashboard = document.getElementById('dashboard-view');
+
+                if (!isHoliday) {
+                console.log("No holiday season active. Showing Dashboard.");
+                dashboard.classList.remove('hidden');
+                dashboard.classList.add('flex');
+                } else {
+                console.log("Holiday season active! Showing Tracker.");
+                dashboard.classList.add('hidden');
+                dashboard.classList.remove('flex');
+                }
+                }
+
+                // --- Seasonal Logic ---
+                function getSeason() {
+                const date = new Date();
+                const month = date.getMonth(); // 0-11
+                const day = date.getDate();
+
+                // Jul: 1. Desember - 5. Januar
+                if (month === 11 || (month === 0 && day <= 5)) { return 'christmas' ; } // Vinterferie (Agder: Uke 8):
+                    Ca. 15. Februar - 1. Mars if (month===1 && day>= 15 && day <= 28) { // Feb 15-28 covers Week 8
+                        mostly return 'winter' ; } // Påske/Vår: 1. April - 22. April (Varierer, men dekker det meste)
+                        if (month===3 && day <=22) { return 'spring' ; } // Sommer (Skoleferie): ca 20. Juni - 18.
+                        August if ((month===5 && day>= 20) || month === 6 || (month === 7 && day <= 18)) {
+                            return 'summer' ; } // Høst (Agder: Uke 40): Ca 28. September - 10. Oktober if ((month===8
+                            && day>= 28) || (month === 9 && day <= 10)) { return 'autumn' ; } return null; // Ingen
+                                ferie } const seasonConfig={ christmas: { title: "Juleferie" , titleEmoji: "🎄" ,
+                                subtitle: "God jul til hele gjengen!" ,
+                                bg: "radial-gradient(circle at center, #2d3748 0%, #1a202c 100%)" ,
+                                headerColor: "text-yellow-300" , font: "christmas-font" , snow: true, defaultEmoji: "🎅"
+                                }, winter: { title: "Vinterferie" , titleEmoji: "⛷️" ,
+                                subtitle: "God vinterferie! Husk kakao!" ,
+                                bg: "radial-gradient(circle at center, #e0f2fe 0%, #0284c7 100%)" , // Light blue to
+                                blue headerColor: "text-white" , font: "font-sans" , // Fallback to Nunito/Standard
+                                snow: true, defaultEmoji: "⛷️" }, spring: { title: "Vårferie" , titleEmoji: "🌱" ,
+                                subtitle: "Nyt våren og fridagene!" ,
+                                bg: "radial-gradient(circle at center, #dcfce7 0%, #16a34a 100%)" , // Light green to
+                                green headerColor: "text-green-900" , font: "font-sans" , snow: false,
+                                defaultEmoji: "🌱" }, summer: { title: "Sommerferie" , titleEmoji: "☀️" ,
+                                subtitle: "God sommer! Nyt solen!" ,
+                                bg: "radial-gradient(circle at center, #fef9c3 0%, #eab308 100%)" , // Light yellow to
+                                yellow headerColor: "text-orange-600" , font: "font-sans" , snow: false,
+                                defaultEmoji: "🏖️" }, autumn: { title: "Høstferie" , titleEmoji: "🍂" ,
+                                subtitle: "God høstferie! Ut på tur!" ,
+                                bg: "radial-gradient(circle at center, #ffedd5 0%, #c2410c 100%)" , // Orange to rust
+                                headerColor: "text-red-900" , font: "font-sans" , snow: false, defaultEmoji: "🍂" } };
+                                // Manual Toggle with 'X' key window.addEventListener('keydown', (e)=> {
+                                if (e.key === 'x' || e.key === 'X') {
+                                console.log("Manual toggle triggered");
+                                const dashboard = document.getElementById('dashboard-view');
+                                const isDashboardVisible = !dashboard.classList.contains('hidden');
+
+                                if (isDashboardVisible) {
+                                // Switch to App
+                                startPageRotation(true);
+                                applySeasonTheme();
+                                } else {
+                                // Switch to Dashboard
+                                startPageRotation(false);
+                                }
+                                }
+                                });
+
+
+                                function applySeasonTheme() {
+                                let season = getSeason();
+
+                                // Fallback if no season but forced to show (defaults to winter or next closest)
+                                if (!season) {
+                                season = 'winter'; // Default theme for non-holidays
+                                }
+
+                                const config = seasonConfig[season];
+                                const year = new Date().getFullYear();
+
+                                // Update Title (Emoji on both sides)
+                                const titleEl = document.querySelector('header h1');
+                                titleEl.textContent = `${config.titleEmoji} ${config.title} ${year}
+                                ${config.titleEmoji}`;
+
+                                // Remove old specific font/color classes and add new ones
+                                titleEl.className = `text-5xl md:text-6xl drop-shadow-lg font-bold ${config.headerColor}
+                                ${config.font}`;
+
+                                // Update Subtitle
+                                const subtitleEl = document.querySelector('header p');
+                                subtitleEl.textContent = config.subtitle;
+
+                                // Adjust subtitle color
+                                if (season === 'summer' || season === 'spring' || season === 'autumn') {
+                                subtitleEl.classList.remove('text-blue-200');
+                                subtitleEl.classList.add('text-gray-800');
+                                } else {
+                                subtitleEl.classList.add('text-blue-200');
+                                subtitleEl.classList.remove('text-gray-800');
+                                }
+
+                                // Update Background (Nord Theme is default, but config.bg might override or match)
+                                document.body.style.background = config.bg;
+
+                                // Update Snow (Canvas)
+                                const snowCanvas = document.getElementById('snow-canvas');
+                                if (config.snow) {
+                                if (snowCanvas) startSnowEffect();
+                                } else {
+                                if (snowCanvas) snowCanvas.classList.add('hidden');
+                                }
+
+                                // Update Modal Header Emoji
+                                const modalHeader = document.querySelector('#modal h2');
+                                if (modalHeader) {
+                                modalHeader.textContent = `${config.defaultEmoji} Når tar du ferie?`;
+                                }
+
+                                // Update Default Emoji in Modal
+                                // We'll override the global openModal to use the config.
+                                const oldOpenModal = window.openModal;
+                                window.openModal = function () {
+                                document.getElementById('modal').classList.remove('hidden');
+                                document.getElementById('modal').classList.add('flex');
+                                window.selectColor('red');
+                                window.selectEmoji(config.defaultEmoji);
+                                }
+                                }
+
+                                </script>
+                                </body>
+
+                                </html>
