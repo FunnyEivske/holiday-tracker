@@ -92,12 +92,8 @@
 
                 allEmployees = employees;
 
-                if (allEmployees.length === 0) {
-                    seedInitialData();
-                } else {
-                    renderGrid();
-                    updatePaginationDots();
-                }
+                renderGrid();
+                updatePaginationDots();
             }, (error) => {
                 console.error("Data fetch error:", error);
             });
