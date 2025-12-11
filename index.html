@@ -41,15 +41,23 @@
         let rotationInterval;
 
         // Farge-temaer
+        // Nord Theme Palette
+        const nord = {
+            nord0: '#2e3440', nord1: '#3b4252', nord2: '#434c5e', nord3: '#4c566a', // Polar Night
+            nord4: '#d8dee9', nord5: '#e5e9f0', nord6: '#eceff4', // Snow Storm
+            nord7: '#8fbcbb', nord8: '#88c0d0', nord9: '#81a1c1', nord10: '#5e81ac', // Frost
+            nord11: '#bf616a', nord12: '#d08770', nord13: '#ebcb8b', nord14: '#a3be8c', nord15: '#b48ead' // Aurora
+        };
+
         const themes = {
-            red: { bg: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', border: '#dc2626', shadow: 'rgba(220, 38, 38, 0.5)', textMain: 'text-red-900', textSub: 'text-red-700', textAccent: 'text-red-600', badge: 'bg-red-600', label: 'Juleferie' },
-            pink: { bg: 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)', border: '#db2777', shadow: 'rgba(219, 39, 119, 0.5)', textMain: 'text-pink-900', textSub: 'text-pink-700', textAccent: 'text-pink-600', badge: 'bg-pink-600', label: 'Ferie' },
-            blue: { bg: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)', border: '#2563eb', shadow: 'rgba(37, 99, 235, 0.5)', textMain: 'text-blue-900', textSub: 'text-blue-700', textAccent: 'text-blue-600', badge: 'bg-blue-600', label: 'Vinterferie' },
-            green: { bg: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', border: '#16a34a', shadow: 'rgba(22, 163, 74, 0.5)', textMain: 'text-green-900', textSub: 'text-green-700', textAccent: 'text-green-600', badge: 'bg-green-600', label: 'Fri' },
-            purple: { bg: 'linear-gradient(135deg, #f3e8ff 0%, #d8b4fe 100%)', border: '#9333ea', shadow: 'rgba(147, 51, 234, 0.5)', textMain: 'text-purple-900', textSub: 'text-purple-700', textAccent: 'text-purple-600', badge: 'bg-purple-600', label: 'Ferie' },
-            orange: { bg: 'linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)', border: '#ea580c', shadow: 'rgba(234, 88, 12, 0.5)', textMain: 'text-orange-900', textSub: 'text-orange-700', textAccent: 'text-orange-600', badge: 'bg-orange-600', label: 'Solferie' },
-            yellow: { bg: 'linear-gradient(135deg, #fef9c3 0%, #fde047 100%)', border: '#ca8a04', shadow: 'rgba(202, 138, 4, 0.5)', textMain: 'text-yellow-900', textSub: 'text-yellow-700', textAccent: 'text-yellow-600', badge: 'bg-yellow-600', label: 'Fri' },
-            teal: { bg: 'linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%)', border: '#0d9488', shadow: 'rgba(13, 148, 136, 0.5)', textMain: 'text-teal-900', textSub: 'text-teal-700', textAccent: 'text-teal-600', badge: 'bg-teal-600', label: 'Avspasering' },
+            red: { bg: `linear-gradient(135deg, ${nord.nord11} 0%, #a6555d 100%)`, border: nord.nord11, shadow: 'rgba(191, 97, 106, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#81a1c1]', badge: 'bg-[#bf616a]', label: 'Juleferie' },
+            pink: { bg: `linear-gradient(135deg, ${nord.nord15} 0%, #9b7295 100%)`, border: nord.nord15, shadow: 'rgba(180, 142, 173, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#88c0d0]', badge: 'bg-[#b48ead]', label: 'Ferie' },
+            blue: { bg: `linear-gradient(135deg, ${nord.nord10} 0%, ${nord.nord9} 100%)`, border: nord.nord9, shadow: 'rgba(129, 161, 193, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#e5e9f0]', textAccent: 'text-[#8fbcbb]', badge: 'bg-[#5e81ac]', label: 'Vinterferie' },
+            green: { bg: `linear-gradient(135deg, ${nord.nord14} 0%, #8ca575 100%)`, border: nord.nord14, shadow: 'rgba(163, 190, 140, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#ebcb8b]', badge: 'bg-[#a3be8c]', label: 'Fri' },
+            purple: { bg: `linear-gradient(135deg, ${nord.nord15} 0%, #9b7295 100%)`, border: nord.nord15, shadow: 'rgba(180, 142, 173, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#88c0d0]', badge: 'bg-[#b48ead]', label: 'Ferie' }, // Same as pink for now
+            orange: { bg: `linear-gradient(135deg, ${nord.nord12} 0%, #b8735d 100%)`, border: nord.nord12, shadow: 'rgba(208, 135, 112, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#ebcb8b]', badge: 'bg-[#d08770]', label: 'Solferie' },
+            yellow: { bg: `linear-gradient(135deg, ${nord.nord13} 0%, #d6b779 100%)`, border: nord.nord13, shadow: 'rgba(235, 203, 139, 0.4)', textMain: 'text-[#2e3440]', textSub: 'text-[#3b4252]', textAccent: 'text-[#bf616a]', badge: 'bg-[#ebcb8b]', label: 'Fri' }, // Dark text for yellow card
+            teal: { bg: `linear-gradient(135deg, ${nord.nord7} 0%, #7aa1a0 100%)`, border: nord.nord7, shadow: 'rgba(143, 188, 187, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#e5e9f0]', textAccent: 'text-[#5e81ac]', badge: 'bg-[#8fbcbb]', label: 'Avspasering' },
         };
 
         // --- Auth & Data Loading ---
@@ -167,24 +175,24 @@
                     <h2 class="text-3xl font-bold ${theme.textMain} mb-1 truncate">${emp.name}</h2>
                     <p class="text-md ${theme.textSub} font-semibold mb-4 uppercase tracking-wider">${theme.label} / Fri</p>
                     
-                    <div class="space-y-3">
-                        <div class="bg-white/60 rounded-xl p-3">
-                            <p class="text-xs text-gray-600 uppercase font-bold">Starter:</p>
-                            <p class="text-2xl text-gray-900 font-bold leading-none mt-1">${formatNB(startD)}</p>
-                            <p class="${theme.textAccent} font-medium text-sm">${getDayNB(startD)}</p>
+                <div class="space-y-3">
+                        <div class="bg-[#2e3440]/40 rounded-xl p-3 shadow-sm border border-[#4c566a]/30">
+                            <p class="text-xs text-[#d8dee9] uppercase font-bold shadow-black drop-shadow-sm">Starter:</p>
+                            <p class="text-2xl text-[#eceff4] font-bold leading-none mt-1 drop-shadow-md">${formatNB(startD)}</p>
+                            <p class="${theme.textAccent} font-medium text-sm drop-shadow-sm">${getDayNB(startD)}</p>
                         </div>
                         
-                        <div class="flex justify-center text-xl ${theme.textAccent}">⬇</div>
+                        <div class="flex justify-center text-xl ${theme.textAccent} drop-shadow-md">⬇</div>
                         
-                        <div class="bg-white/60 rounded-xl p-3">
-                            <p class="text-xs text-gray-600 uppercase font-bold">Slutter:</p>
-                            <p class="text-2xl text-gray-900 font-bold leading-none mt-1">${formatNB(endD)}</p>
-                            <p class="${theme.textAccent} font-medium text-sm">${getDayNB(endD)}</p>
+                        <div class="bg-[#2e3440]/40 rounded-xl p-3 shadow-sm border border-[#4c566a]/30">
+                            <p class="text-xs text-[#d8dee9] uppercase font-bold shadow-black drop-shadow-sm">Slutter:</p>
+                            <p class="text-2xl text-[#eceff4] font-bold leading-none mt-1 drop-shadow-md">${formatNB(endD)}</p>
+                            <p class="${theme.textAccent} font-medium text-sm drop-shadow-sm">${getDayNB(endD)}</p>
                         </div>
                     </div>
                 </div>
-                <div class="mt-4 text-center bg-white/40 rounded-lg p-2">
-                    <p class="${theme.textMain} font-bold text-sm">✨ ${emoji} God Ferie ${emoji} ✨</p>
+                <div class="mt-4 text-center bg-[#2e3440]/30 rounded-lg p-2 border border-[#4c566a]/20">
+                    <p class="${theme.textMain} font-bold text-sm drop-shadow-md">✨ ${emoji} God Ferie ${emoji} ✨</p>
                 </div>
                 
                 <button onclick="window.deleteItem('${emp.id}')" class="absolute bottom-2 right-2 text-gray-400 hover:text-red-600 opacity-20 hover:opacity-100 transition z-10">
@@ -308,7 +316,7 @@
     <style>
         body {
             font-family: 'Nunito', sans-serif;
-            background: radial-gradient(circle at center, #2d3748 0%, #1a202c 100%);
+            background: radial-gradient(circle at center, #2e3440 0%, #242933 100%);
             margin: 0;
             overflow: hidden;
             height: 100vh;
@@ -548,55 +556,53 @@
         </div>
     </div>
 
-    <!-- DASHBOARD VIEW (NCD REPLACEMENT) -->
-    <div id="dashboard-view" class="hidden fixed inset-0 bg-gray-900 z-50 flex flex-col text-white font-sans">
+    <!-- DASHBOARD VIEW (Optimized for Grouping & Visibility - Nord Theme) -->
+    <div id="dashboard-view" class="hidden fixed inset-0 bg-[#2e3440] z-50 flex flex-col font-sans text-[#eceff4]">
 
-        <!-- Comics Grid -->
+        <!-- Comics Grid Container -->
+        <!-- 2 Columns ensures pairs (e.g. Lunch 1 & 2) stay on the same row -->
         <div id="comic-grid"
-            class="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 overflow-hidden items-center justify-items-center">
+            class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 p-4 overflow-y-auto content-start justify-items-center w-full max-w-[1800px] mx-auto scroll-smooth">
             <!-- Comics will be injected here -->
-            <div class="text-gray-500 animate-pulse">Kobler til NCD...</div>
+            <div class="col-span-full flex flex-col items-center justify-center h-full text-[#4c566a] animate-pulse">
+                <span class="text-lg font-medium">Laster inn striper...</span>
+            </div>
         </div>
 
-        <!-- Dashboard Footer -->
+        <!-- Footer -->
         <div
-            class="h-auto min-h-[120px] bg-black/80 backdrop-blur-md border-t border-white/10 flex flex-col md:flex-row items-center justify-between p-6 gap-6 shrink-0">
+            class="min-h-[100px] bg-[#3b4252] border-t border-[#4c566a] flex items-center justify-between px-8 py-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-20 relative">
 
-            <!-- QR Code -->
-            <div class="flex items-center gap-4">
-                <div id="dash-qrcode" class="bg-white p-2 rounded-lg shadow-lg"></div>
-                <div class="text-left hidden md:block">
-                    <p class="font-bold text-gray-200">Bli med!</p>
-                    <p class="text-xs text-gray-400">Scan for å åpne</p>
-                </div>
+            <!-- Left: QR Code -->
+            <div class="flex items-center gap-6 w-1/5 min-w-[120px]">
+                <div id="dash-qrcode" class="bg-[#eceff4] p-2 rounded-lg shadow-md shrink-0"></div>
+                <!-- Optional text removed to save space/clutter -->
             </div>
 
-            <!-- Quote / Sadserver -->
-            <div class="flex-grow text-center max-w-2xl">
-                <p id="dash-quote" class="text-xl md:text-2xl font-light italic text-gray-300 leading-relaxed">
-                    Loading wisdom...
+            <!-- Center: Quote (Full Visibility) -->
+            <div class="flex-grow flex justify-center w-3/5 px-4">
+                <p id="dash-quote"
+                    class="text-lg md:text-xl text-[#d8dee9] italic text-center leading-normal whitespace-normal break-words border-l-4 border-[#5e81ac] pl-6 py-2">
+                    "Loading wisdom..."
                 </p>
             </div>
 
-            <!-- Clock & Status -->
-            <div class="text-right flex flex-col items-end">
-                <div id="dash-clock"
-                    class="text-5xl md:text-6xl font-bold font-mono tracking-widest text-white drop-shadow-md">
-                    00:00
-                </div>
-                <!-- Connection Dot -->
+            <!-- Right: Clock & Status -->
+            <div class="flex items-center justify-end gap-4 w-1/5 min-w-[150px]">
+                <div id="dash-clock" class="text-4xl font-mono font-bold text-[#eceff4] tracking-wider">00:00</div>
+                <!-- Status Dot -->
                 <div id="connection-status"
-                    class="w-3 h-3 rounded-full bg-red-500 mt-2 shadow-[0_0_8px_rgba(239,68,68,0.6)] transition-colors duration-500">
+                    class="w-3 h-3 rounded-full bg-[#bf616a] shadow-[0_0_10px_rgba(191,97,106,0.7)] transition-colors duration-500">
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL FOR REGISTRERING -->
-    <div id="modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <!-- MODAL FOR REGISTRERING (Nord Theme) -->
+    <div id="modal" class="fixed inset-0 bg-[#2e3440]/90 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
         <div
-            class="bg-white rounded-2xl w-full max-w-lg p-6 relative shadow-2xl border-4 border-blue-200 max-h-[90vh] overflow-y-auto no-scrollbar">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            class="bg-[#3b4252] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl border-4 border-[#5e81ac] max-h-[90vh] overflow-y-auto no-scrollbar text-[#eceff4]">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-[#d8dee9] hover:text-[#bf616a]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" />
@@ -604,19 +610,19 @@
                 </svg>
             </button>
 
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">🎅 Når tar du ferie?</h2>
+            <h2 class="text-2xl font-bold text-[#eceff4] mb-6 text-center">🎅 Når tar du ferie?</h2>
 
             <form id="vacation-form" onsubmit="submitForm(event)" class="space-y-6">
                 <!-- Navn -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Ditt Navn</label>
+                    <label class="block text-sm font-bold text-[#d8dee9] mb-1">Ditt Navn</label>
                     <input type="text" id="input-name" required placeholder="F.eks. Kari Nordmann"
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        class="w-full p-3 bg-[#2e3440] border border-[#4c566a] rounded-lg text-[#eceff4] focus:ring-2 focus:ring-[#88c0d0] outline-none placeholder-[#4c566a]">
                 </div>
 
                 <!-- Fargevelger -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Velg din stil</label>
+                    <label class="block text-sm font-bold text-[#d8dee9] mb-2">Velg din stil</label>
                     <input type="hidden" id="selected-color" value="red">
                     <div class="flex flex-wrap gap-3 justify-center">
                         <button type="button" data-color="red" onclick="selectColor('red')"
@@ -640,7 +646,7 @@
 
                 <!-- Emoji Velger -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Velg ikon</label>
+                    <label class="block text-sm font-bold text-[#d8dee9] mb-2">Velg ikon</label>
                     <input type="hidden" id="selected-emoji" value="🎅">
                     <div class="grid grid-cols-6 gap-2">
                         <button type="button" data-emoji="🎅" onclick="selectEmoji('🎅')"
@@ -684,19 +690,19 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Startdato</label>
+                        <label class="block text-sm font-bold text-[#d8dee9] mb-1">Startdato</label>
                         <input type="date" id="input-start" required
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            class="w-full p-3 bg-[#2e3440] border border-[#4c566a] rounded-lg text-[#eceff4] focus:ring-2 focus:ring-[#88c0d0] outline-none">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Sluttdato</label>
+                        <label class="block text-sm font-bold text-[#d8dee9] mb-1">Sluttdato</label>
                         <input type="date" id="input-end" required
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            class="w-full p-3 bg-[#2e3440] border border-[#4c566a] rounded-lg text-[#eceff4] focus:ring-2 focus:ring-[#88c0d0] outline-none">
                     </div>
                 </div>
 
                 <button type="submit" id="submit-btn"
-                    class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg mt-4 shadow transition">
+                    class="w-full bg-[#8fbcbb] hover:bg-[#88c0d0] text-[#2e3440] font-bold py-3 rounded-lg mt-4 shadow transition">
                     Lagre Ferie
                 </button>
             </form>
@@ -791,6 +797,7 @@
                     if (status) {
                         status.classList.remove('bg-red-500');
                         status.classList.add('bg-green-500');
+                        status.style.boxShadow = "0 0 8px rgba(34, 197, 94, 0.6)"; // Green glow
                     }
                     this.reconnectDelay = 5000;
                 };
@@ -820,6 +827,7 @@
                 if (status) {
                     status.classList.remove('bg-green-500');
                     status.classList.add('bg-red-500');
+                    status.style.boxShadow = "0 0 8px rgba(239, 68, 68, 0.6)"; // Red glow
                 }
                 setTimeout(() => this.connectWS(), this.reconnectDelay);
                 this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
@@ -849,16 +857,23 @@
                         const comicType = (domainComics && domainComics[source.type]) ? source.type : "Lunch";
 
                         if (domainComics && domainComics[comicType]) {
-                            // Take first valid image
-                            const comicsList = domainComics[comicType].slice(0, 1);
+                            // Take first 2 valid images to fill 6 slots (3 sources * 2)
+                            const comicsList = domainComics[comicType].slice(0, 2);
 
                             comicsList.forEach(imgData => {
                                 const wrapper = document.createElement('div');
-                                wrapper.className = "relative bg-white p-2 rounded-lg shadow-2xl max-h-[50vh] flex items-center justify-center overflow-hidden transform hover:scale-105 transition duration-300";
+                                // Nord Theme Card: Nord1 Background, Nord3 Border
+                                wrapper.className = "w-full h-auto bg-[#3b4252]/50 rounded-lg shadow-sm border border-[#4c566a] hover:border-[#88c0d0] transition-colors flex items-center justify-center p-2";
 
                                 const img = document.createElement('img');
-                                img.src = imgData.url;
-                                img.className = "max-w-full max-h-full object-contain";
+                                // Fix relative URLs
+                                let src = imgData.url;
+                                if (src.startsWith('/')) {
+                                    src = 'https://ncd.idmedia.no' + src;
+                                }
+                                img.src = src;
+                                // Full visibility, no clipping
+                                img.className = "w-full h-auto object-contain";
 
                                 wrapper.appendChild(img);
                                 grid.appendChild(wrapper);
