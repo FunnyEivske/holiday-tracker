@@ -326,6 +326,45 @@
     </div>
 
     <!-- DASHBOARD VIEW (Optimized for Grouping & Visibility - Nord Theme) -->
+    <div id="dashboard-view" class="hidden fixed inset-0 bg-[#2e3440] z-50 flex flex-col font-sans text-[#eceff4]">
+
+        <!-- Comics Grid Container -->
+        <!-- 2 Columns ensures pairs (e.g. Lunch 1 & 2) stay on the same row -->
+        <div id="comic-grid"
+            class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 p-4 overflow-y-auto w-full max-w-[1800px] mx-auto scroll-smooth">
+            <!-- Comics will be injected here -->
+            <div class="col-span-full flex flex-col items-center justify-center h-full text-[#4c566a] animate-pulse">
+                <span class="text-lg font-medium">Laster inn striper...</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div
+            class="min-h-[100px] bg-[#3b4252] border-t border-[#4c566a] flex items-center justify-between px-8 py-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-20 relative">
+
+            <!-- Left: QR Code -->
+            <div class="flex items-center gap-6 w-1/5 min-w-[120px]">
+                <div id="dash-qrcode" class="bg-[#eceff4] p-2 rounded-lg shadow-md shrink-0"></div>
+            </div>
+
+            <!-- Center: Quote (Full Visibility) -->
+            <div class="flex-grow flex justify-center w-3/5 px-4">
+                <p id="dash-quote"
+                    class="text-lg md:text-xl text-[#d8dee9] italic text-center leading-normal whitespace-normal break-words border-l-4 border-[#5e81ac] pl-6 py-2">
+                    "Loading wisdom..."
+                </p>
+            </div>
+
+            <!-- Right: Clock & Status -->
+            <div class="flex items-center justify-end gap-4 w-1/5 min-w-[150px]">
+                <div id="dash-clock" class="text-4xl font-mono font-bold text-[#eceff4] tracking-wider">00:00</div>
+                <!-- Status Dot -->
+                <div id="connection-status"
+                    class="w-3 h-3 rounded-full bg-[#bf616a] shadow-[0_0_10px_rgba(191,97,106,0.7)] transition-colors duration-500">
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         window.addEventListener('load', () => {
