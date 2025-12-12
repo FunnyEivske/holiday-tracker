@@ -152,6 +152,9 @@
 
             const theme = themes[colorKey] || themes.red;
 
+            const currentSeason = getSeason();
+            const seasonLabel = (currentSeason && seasonConfig[currentSeason]) ? seasonConfig[currentSeason].title : "Ferie";
+
             const div = document.createElement('div');
             div.className = `rounded-3xl p-6 relative transform transition duration-300 h-full flex flex-col justify-between`;
             div.style.background = theme.bg;
@@ -164,7 +167,7 @@
                 </div>
                 <div>
                     <h2 class="text-3xl font-bold ${theme.textMain} mb-1 truncate">${emp.name}</h2>
-                    <p class="text-md ${theme.textSub} font-semibold mb-4 uppercase tracking-wider">${theme.label} / Fri</p>
+                    <p class="text-md ${theme.textSub} font-semibold mb-4 uppercase tracking-wider">${seasonLabel} / Fri</p>
                     
                 <div class="space-y-3">
                         <div class="bg-[#2e3440]/40 rounded-xl p-3 shadow-sm border border-[#4c566a]/30">
@@ -224,74 +227,9 @@
         }
 
         // --- Selection Logic ---
-        window.selectColor = function (color) {
-            document.getElementById('selected-color').value = color;
-            // Oppdater UI
-            document.querySelectorAll('.color-btn').forEach(btn => {
-                if (btn.dataset.color === color) {
-                    btn.classList.add('ring-4', 'ring-offset-2', 'ring-gray-400', 'scale-110');
-                } else {
-                    btn.classList.remove('ring-4', 'ring-offset-2', 'ring-gray-400', 'scale-110');
-                }
-            });
-        }
 
-        window.selectEmoji = function (emoji) {
-            document.getElementById('selected-emoji').value = emoji;
-            // Oppdater UI
-            document.querySelectorAll('.emoji-btn').forEach(btn => {
-                if (btn.dataset.emoji === emoji) {
-                    btn.classList.add('bg-blue-100', 'border-blue-500', 'scale-110');
-                    btn.classList.remove('border-transparent');
-                } else {
-                    btn.classList.remove('bg-blue-100', 'border-blue-500', 'scale-110');
-                    btn.classList.add('border-transparent');
-                }
-            });
-        }
 
-        // --- Form Handling ---
-        window.openModal = function () {
-            document.getElementById('modal').classList.remove('hidden');
-            document.getElementById('modal').classList.add('flex');
-            // Select default
-            window.selectColor('red');
-            window.selectEmoji('🎅');
-        }
 
-        window.closeModal = function () {
-            document.getElementById('modal').classList.add('hidden');
-            document.getElementById('modal').classList.remove('flex');
-        }
-
-        window.submitForm = async function (e) {
-            e.preventDefault();
-            const name = document.getElementById('input-name').value;
-            const color = document.getElementById('selected-color').value;
-            const emoji = document.getElementById('selected-emoji').value;
-            const startDate = document.getElementById('input-start').value;
-            const endDate = document.getElementById('input-end').value;
-
-            if (!name || !startDate || !endDate) return;
-
-            const btn = document.getElementById('submit-btn');
-            const originalText = btn.innerText;
-            btn.innerText = "Lagrer...";
-            btn.disabled = true;
-
-            try {
-                const currentSeason = getSeason();
-                const col = collection(db, 'artifacts', appId, 'public', 'data', currentSeason);
-                await addDoc(col, { name, color, emoji, startDate, endDate });
-                closeModal();
-                document.getElementById('vacation-form').reset();
-            } catch (err) {
-                alert("Kunne ikke lagre: " + err.message);
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        }
 
         window.deleteItem = async function (id) {
             if (confirm("Slette denne oppføringen?")) {
@@ -383,178 +321,30 @@
                 </div>
             </div>
 
-            <button onclick="openModal()"
-                class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 flex items-center gap-2">
-                <span class="text-xl">+</span> Registrer Ferie
-            </button>
+            <!-- Registration button removed, now handled via QR Code / register.html -->
         </div>
     </div>
 
     <!-- DASHBOARD VIEW (Optimized for Grouping & Visibility - Nord Theme) -->
-    <div id="dashboard-view" class="hidden fixed inset-0 bg-[#2e3440] z-50 flex flex-col font-sans text-[#eceff4]">
-
-        <!-- Comics Grid Container -->
-        <!-- 2 Columns ensures pairs (e.g. Lunch 1 & 2) stay on the same row -->
-        <div id="comic-grid"
-            class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4 p-4 overflow-y-auto w-full max-w-[1800px] mx-auto scroll-smooth">
-            <!-- Comics will be injected here -->
-            <div class="col-span-full flex flex-col items-center justify-center h-full text-[#4c566a] animate-pulse">
-                <span class="text-lg font-medium">Laster inn striper...</span>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div
-            class="min-h-[100px] bg-[#3b4252] border-t border-[#4c566a] flex items-center justify-between px-8 py-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-20 relative">
-
-            <!-- Left: QR Code -->
-            <div class="flex items-center gap-6 w-1/5 min-w-[120px]">
-                <div id="dash-qrcode" class="bg-[#eceff4] p-2 rounded-lg shadow-md shrink-0"></div>
-                <!-- Optional text removed to save space/clutter -->
-            </div>
-
-            <!-- Center: Quote (Full Visibility) -->
-            <div class="flex-grow flex justify-center w-3/5 px-4">
-                <p id="dash-quote"
-                    class="text-lg md:text-xl text-[#d8dee9] italic text-center leading-normal whitespace-normal break-words border-l-4 border-[#5e81ac] pl-6 py-2">
-                    "Loading wisdom..."
-                </p>
-            </div>
-
-            <!-- Right: Clock & Status -->
-            <div class="flex items-center justify-end gap-4 w-1/5 min-w-[150px]">
-                <div id="dash-clock" class="text-4xl font-mono font-bold text-[#eceff4] tracking-wider">00:00</div>
-                <!-- Status Dot -->
-                <div id="connection-status"
-                    class="w-3 h-3 rounded-full bg-[#bf616a] shadow-[0_0_10px_rgba(191,97,106,0.7)] transition-colors duration-500">
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL FOR REGISTRERING (Nord Theme) -->
-    <div id="modal" class="fixed inset-0 bg-[#2e3440]/90 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div
-            class="bg-[#3b4252] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl border-4 border-[#5e81ac] max-h-[90vh] overflow-y-auto no-scrollbar text-[#eceff4]">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-[#d8dee9] hover:text-[#bf616a]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-            </button>
-
-            <h2 class="text-2xl font-bold text-[#eceff4] mb-6 text-center">🎅 Når tar du ferie?</h2>
-
-            <form id="vacation-form" onsubmit="submitForm(event)" class="space-y-6">
-                <!-- Navn -->
-                <div>
-                    <label class="block text-sm font-bold text-[#d8dee9] mb-1">Ditt Navn</label>
-                    <input type="text" id="input-name" required placeholder="F.eks. Kari Nordmann"
-                        class="w-full p-3 bg-[#2e3440] border border-[#4c566a] rounded-lg text-[#eceff4] focus:ring-2 focus:ring-[#88c0d0] outline-none placeholder-[#4c566a]">
-                </div>
-
-                <!-- Fargevelger -->
-                <div>
-                    <label class="block text-sm font-bold text-[#d8dee9] mb-2">Velg din stil</label>
-                    <input type="hidden" id="selected-color" value="red">
-                    <div class="flex flex-wrap gap-3 justify-center">
-                        <button type="button" data-color="red" onclick="selectColor('red')"
-                            class="color-btn w-10 h-10 rounded-full bg-red-500 shadow-md hover:scale-110 transition"></button>
-                        <button type="button" data-color="pink" onclick="selectColor('pink')"
-                            class="color-btn w-10 h-10 rounded-full bg-pink-500 shadow-md hover:scale-110 transition"></button>
-                        <button type="button" data-color="blue" onclick="selectColor('blue')"
-                            class="color-btn w-10 h-10 rounded-full bg-blue-500 shadow-md hover:scale-110 transition"></button>
-                        <button type="button" data-color="green" onclick="selectColor('green')"
-                            class="color-btn w-10 h-10 rounded-full bg-green-500 shadow-md hover:scale-110 transition"></button>
-                        <button type="button" data-color="purple" onclick="selectColor('purple')"
-                            class="color-btn w-10 h-10 rounded-full bg-purple-500 shadow-md hover:scale-110 transition"></button>
-                        <button type="button" data-color="orange" onclick="selectColor('orange')"
-                            class="color-btn w-10 h-10 rounded-full bg-orange-500 shadow-md hover:scale-110 transition"></button>
-                        <button type="button" data-color="yellow" onclick="selectColor('yellow')"
-                            class="color-btn w-10 h-10 rounded-full bg-yellow-400 shadow-md hover:scale-110 transition"></button>
-                        <button type="button" data-color="teal" onclick="selectColor('teal')"
-                            class="color-btn w-10 h-10 rounded-full bg-teal-500 shadow-md hover:scale-110 transition"></button>
-                    </div>
-                </div>
-
-                <!-- Emoji Velger -->
-                <div>
-                    <label class="block text-sm font-bold text-[#d8dee9] mb-2">Velg ikon</label>
-                    <input type="hidden" id="selected-emoji" value="🎅">
-                    <div class="grid grid-cols-6 gap-2">
-                        <button type="button" data-emoji="🎅" onclick="selectEmoji('🎅')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎅</button>
-                        <button type="button" data-emoji="🎄" onclick="selectEmoji('🎄')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎄</button>
-                        <button type="button" data-emoji="❄️" onclick="selectEmoji('❄️')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">❄️</button>
-                        <button type="button" data-emoji="🎁" onclick="selectEmoji('🎁')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎁</button>
-                        <button type="button" data-emoji="⛷️" onclick="selectEmoji('⛷️')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">⛷️</button>
-                        <button type="button" data-emoji="🏂" onclick="selectEmoji('🏂')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🏂</button>
-                        <button type="button" data-emoji="🏖️" onclick="selectEmoji('🏖️')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🏖️</button>
-                        <button type="button" data-emoji="✈️" onclick="selectEmoji('✈️')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">✈️</button>
-                        <button type="button" data-emoji="🎮" onclick="selectEmoji('🎮')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🎮</button>
-                        <button type="button" data-emoji="🍷" onclick="selectEmoji('🍷')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🍷</button>
-                        <button type="button" data-emoji="💤" onclick="selectEmoji('💤')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">💤</button>
-                        <button type="button" data-emoji="🕯️" onclick="selectEmoji('🕯️')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🕯️</button>
-                        <button type="button" data-emoji="☃️" onclick="selectEmoji('☃️')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">☃️</button>
-                        <button type="button" data-emoji="🦌" onclick="selectEmoji('🦌')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🦌</button>
-                        <button type="button" data-emoji="🌟" onclick="selectEmoji('🌟')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🌟</button>
-                        <button type="button" data-emoji="🐕" onclick="selectEmoji('🐕')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🐕</button>
-                        <button type="button" data-emoji="🏠" onclick="selectEmoji('🏠')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">🏠</button>
-                        <button type="button" data-emoji="💻" onclick="selectEmoji('💻')"
-                            class="emoji-btn text-2xl p-2 rounded-lg border-2 border-transparent hover:bg-gray-100 transition">💻</button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-[#d8dee9] mb-1">Startdato</label>
-                        <input type="date" id="input-start" required
-                            class="w-full p-3 bg-[#2e3440] border border-[#4c566a] rounded-lg text-[#eceff4] focus:ring-2 focus:ring-[#88c0d0] outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-[#d8dee9] mb-1">Sluttdato</label>
-                        <input type="date" id="input-end" required
-                            class="w-full p-3 bg-[#2e3440] border border-[#4c566a] rounded-lg text-[#eceff4] focus:ring-2 focus:ring-[#88c0d0] outline-none">
-                    </div>
-                </div>
-
-                <button type="submit" id="submit-btn"
-                    class="w-full bg-[#8fbcbb] hover:bg-[#88c0d0] text-[#2e3440] font-bold py-3 rounded-lg mt-4 shadow transition">
-                    Lagre Ferie
-                </button>
-            </form>
-        </div>
-    </div>
 
     <script>
         window.addEventListener('load', () => {
             const productionUrl = "https://funnyeivske.github.io/holiday-tracker/";
-            const teamsUrl = "https://teams.microsoft.com/l/message/19:ce4a4445-4517-4f4c-81cb-d3b105566f71_f44393be-43d3-4aa0-9261-e22835368ed7@unq.gbl.spaces/1765453701348?context=%7B%22contextType%22%3A%22chat%22%7D";
 
-            let targetUrl = window.location.href;
+            // Determine base URL
+            let baseUrl = window.location.href;
             if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                 if (productionUrl) {
-                    targetUrl = productionUrl;
-                    console.log("Local development detected. QR Code pointing to:", targetUrl);
+                    baseUrl = productionUrl;
+                    console.log("Local development detected. Using production URL base:", baseUrl);
                 }
             }
+
+            // Construct Target URL for Registration
+            // Ensure we don't double-slash or miss a slash
+            const targetUrl = baseUrl.endsWith('/')
+                ? baseUrl + 'register.html'
+                : baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'register.html';
 
             const qrContainer = document.getElementById("qrcode");
 
@@ -606,8 +396,16 @@
             renderQR: function () {
                 const qrEl = document.getElementById('dash-qrcode');
                 qrEl.innerHTML = '';
+
+                // Construct Target URL for Registration (Simple relative logic)
+                // We want the kiosk QR to also let people register easily
+                let baseUrl = window.location.href;
+                const targetUrl = baseUrl.endsWith('/')
+                    ? baseUrl + 'register.html'
+                    : baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'register.html';
+
                 new QRCode(qrEl, {
-                    text: window.location.href,
+                    text: targetUrl,
                     width: 80,
                     height: 80,
                     colorDark: "#000000",
