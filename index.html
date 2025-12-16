@@ -88,7 +88,29 @@
                     employees.push({ id: doc.id, ...doc.data() });
                 });
 
-                employees.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+                employees.sort((a, b) => {
+                    const d1 = new Date(a.startDate);
+                    const d2 = new Date(b.startDate);
+
+                    // Safety: Invalid dates go to end
+                    if (isNaN(d1)) return 1;
+                    if (isNaN(d2)) return -1;
+
+                    const diff = d1 - d2;
+                    if (diff !== 0) return diff;
+
+                    const e1 = new Date(a.endDate);
+                    const e2 = new Date(b.endDate);
+
+                    if (isNaN(e1)) return 1;
+                    if (isNaN(e2)) return -1;
+
+                    const diffEnd = e1 - e2;
+                    if (diffEnd !== 0) return diffEnd;
+
+                    // Tie-breaker: Name (Alphabetical)
+                    return (a.name || "").localeCompare(b.name || "");
+                });
 
                 allEmployees = employees;
 
@@ -130,6 +152,20 @@
             const formatNB = (date) => {
                 const d = date.getDate();
                 const m = ["Januar", "Februar", "Mars", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Desember"][date.getMonth()];
+                const y = date.getFullYear();
+                const currentYear = new Date().getFullYear();
+
+                // Show year if it's not current year AND not next year (for dec/jan overlap)
+                // Actually, simpler: if it's more than 365 days away or in the past? 
+                // Let's just show year if it's not the current active season year(s).
+                // Or just: if year != currentYear && year != currentYear + 1
+                if (y !== currentYear && y !== currentYear + 1) {
+                    return `${d}. ${m} ${y}`;
+                }
+                // Also if it is next year but way off?
+                // Let's stick to simple:
+                if (Math.abs(y - currentYear) > 1) return `${d}. ${m} ${y}`;
+
                 return `${d}. ${m}`;
             };
             const getDayNB = (date) => {
