@@ -15,7 +15,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Firebase Config & Init ---
         // Your web app's Firebase configuration
@@ -33,6 +33,67 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = 'holiday-tracker-main'; // Simple static ID for your app's data path
+
+        // --- Session Management (Remote Control) ---
+        const sessionId = localStorage.getItem('holiday_session_id') || 'sess_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('holiday_session_id', sessionId);
+
+        function startSessionHeartbeat() {
+            const sessionRef = doc(db, 'artifacts', appId, 'private', 'sessions', sessionId);
+
+            // Heartbeat loop
+            const beat = async () => {
+                if (!currentUser) return;
+                try {
+                    await setDoc(sessionRef, {
+                        lastSeen: new Date().toISOString(),
+                        userAgent: navigator.userAgent,
+                        resolution: `${window.innerWidth}x${window.innerHeight}`,
+                        currentView: document.getElementById('dashboard-view').classList.contains('hidden') ? 'tracker' : 'dashboard',
+                        screensaver: Screensaver.active ? Screensaver.mode : 'off'
+                    }, { merge: true });
+                } catch (e) {
+                    console.error("Heartbeat fail", e);
+                }
+            };
+            setInterval(beat, 30000); // Every 30s
+            beat(); // Immediate
+
+            // Command Listener
+            onSnapshot(sessionRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.command) {
+                        console.log("Remote Command Received:", data.command);
+                        handleRemoteCommand(data.command);
+                        // Clear command after execution
+                        updateDoc(sessionRef, { command: null });
+                    }
+                }
+            });
+        }
+
+        function handleRemoteCommand(cmdString) {
+            // Format: "action:arg"
+            const [action, arg] = cmdString.split(':');
+
+            if (action === 'set_view') {
+                if (arg === 'dashboard') {
+                    startPageRotation(false); // Force Dashboard
+                } else if (arg === 'tracker') {
+                    startPageRotation(true); // Force Tracker
+                    applySeasonTheme();
+                }
+            } else if (action === 'trigger_screensaver') {
+                if (arg === 'off') {
+                    window.stopScreensaver();
+                } else {
+                    window.startScreensaver(arg); // 'cleaning' or 'night'
+                }
+            } else if (action === 'reload') {
+                window.location.reload();
+            }
+        }
 
         let currentUser = null;
         let allEmployees = [];
@@ -73,6 +134,7 @@
             if (user) {
                 currentUser = user;
                 startListening();
+                startSessionHeartbeat();
             }
         });
 
@@ -800,6 +862,170 @@
         }
 
 
+    </script>
+    <div id="screensaver" class="hidden fixed inset-0 z-[100] bg-black cursor-none overflow-hidden">
+        <div id="screensaver-bouncer" class="absolute w-32 h-32 flex items-center justify-center text-6xl">
+            🤖
+        </div>
+        <div id="cleaning-timer" class="absolute top-10 right-10 text-white text-4xl font-mono hidden">10:00</div>
+        <div id="screensaver-info" class="absolute bottom-10 left-10 text-gray-500 text-sm font-mono">
+            Trykk for å avslutte
+        </div>
+    </div>
+
+    <!-- Admin/Remote Control Scripts -->
+    <script type="module">
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Re-using the initialized 'db' from the main script if possible, but module scope is isolated.
+        // We can attach these to window or just re-init light versions.
+        // Better: Modify the main script block to export/expose what we need or put this logic INSIDE the main block.
+    </script>
+
+    <script>
+        // --- Screensaver Logic ---
+        const Screensaver = {
+            active: false,
+            mode: 'night', // 'night' or 'cleaning'
+            bouncer: null,
+            container: null,
+            timerEl: null,
+            animationId: null,
+            x: 100, y: 100,
+            dx: 2, dy: 2,
+            colorInterval: null,
+            cleaningTimeout: null,
+
+            init: function () {
+                this.container = document.getElementById('screensaver');
+                this.bouncer = document.getElementById('screensaver-bouncer');
+                this.timerEl = document.getElementById('cleaning-timer');
+
+                // Click to exit (if allowed or just wake up)
+                this.container.addEventListener('click', () => {
+                    if (this.mode === 'night') {
+                        // Optional: Require password or just wake up? 
+                        // For now, simple wake up until 5pm check kicks back in
+                        this.stop();
+                    }
+                });
+
+                // Auto-check time every minute
+                setInterval(() => this.checkTime(), 60000);
+                this.checkTime(); // Initial check
+            },
+
+            start: function (mode = 'night') {
+                if (this.active) return;
+                console.log("Starting Screensaver Mode:", mode);
+                this.active = true;
+                this.mode = mode;
+                this.container.classList.remove('hidden');
+
+                // Reset positions
+                this.x = Math.random() * (window.innerWidth - 200);
+                this.y = Math.random() * (window.innerHeight - 200);
+
+                this.animate();
+                this.startColorCycle();
+
+                if (mode === 'cleaning') {
+                    this.timerEl.classList.remove('hidden');
+                    this.startCleaningTimer();
+                } else {
+                    this.timerEl.classList.add('hidden');
+                }
+            },
+
+            stop: function () {
+                this.active = false;
+                this.container.classList.add('hidden');
+                cancelAnimationFrame(this.animationId);
+                clearInterval(this.colorInterval);
+                if (this.cleaningTimeout) clearTimeout(this.cleaningTimeout);
+            },
+
+            checkTime: function () {
+                if (this.mode === 'cleaning' && this.active) return; // Don't interrupt cleaning
+
+                const now = new Date();
+                const hour = now.getHours();
+
+                // Active between 17:00 (5 PM) and 05:00 (5 AM)
+                const isNight = hour >= 17 || hour < 5;
+
+                if (isNight && !this.active) {
+                    this.start('night');
+                } else if (!isNight && this.active && this.mode === 'night') {
+                    this.stop();
+                    // Reload page at 5 AM to refresh code/state? Optional.
+                    if (hour === 5 && now.getMinutes() < 2) window.location.reload();
+                }
+            },
+
+            animate: function () {
+                if (!this.active) return;
+
+                const maxX = window.innerWidth - this.bouncer.offsetWidth;
+                const maxY = window.innerHeight - this.bouncer.offsetHeight;
+
+                this.x += this.dx;
+                this.y += this.dy;
+
+                if (this.x <= 0 || this.x >= maxX) {
+                    this.dx *= -1;
+                    this.changeColor();
+                }
+                if (this.y <= 0 || this.y >= maxY) {
+                    this.dy *= -1;
+                    this.changeColor();
+                }
+
+                this.bouncer.style.transform = `translate(${this.x}px, ${this.y}px)`;
+                this.animationId = requestAnimationFrame(() => this.animate());
+            },
+
+            changeColor: function () {
+                const colors = ['#bf616a', '#d08770', '#ebcb8b', '#a3be8c', '#b48ead', '#88c0d0', '#81a1c1'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                this.bouncer.style.color = randomColor;
+                this.bouncer.style.textShadow = `0 0 20px ${randomColor}`;
+            },
+
+            startColorCycle: function () {
+                // Flash background occasionally for anti-burn-in
+                this.colorInterval = setInterval(() => {
+                    const bgColors = ['#000000', '#050505', '#0a0a0a', '#000000', '#101010'];
+                    this.container.style.backgroundColor = bgColors[Math.floor(Math.random() * bgColors.length)];
+                }, 5000);
+            },
+
+            startCleaningTimer: function () {
+                let timeLeft = 600; // 10 minutes
+                const updateTimer = () => {
+                    if (!this.active || this.mode !== 'cleaning') return;
+
+                    const m = Math.floor(timeLeft / 60);
+                    const s = timeLeft % 60;
+                    this.timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+
+                    if (timeLeft <= 0) {
+                        this.stop();
+                        // Go back to night mode if suitable?
+                        this.checkTime();
+                    } else {
+                        timeLeft--;
+                        this.cleaningTimeout = setTimeout(updateTimer, 1000);
+                    }
+                };
+                updateTimer();
+            }
+        };
+
+        window.addEventListener('load', () => Screensaver.init());
+
+        // Expose for Remote Control
+        window.startScreensaver = (mode) => Screensaver.start(mode);
+        window.stopScreensaver = () => Screensaver.stop();
     </script>
 </body>
 
