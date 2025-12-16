@@ -36,8 +36,8 @@
         }
 
         function startListening() {
-            // Path: artifacts/{appId}/private/sessions
-            const col = collection(db, 'artifacts', appId, 'private', 'sessions');
+            // Path: artifacts/{appId}/sessions
+            const col = collection(db, 'artifacts', appId, 'sessions');
 
             onSnapshot(col, (snapshot) => {
                 const list = document.getElementById('session-list');
@@ -67,7 +67,7 @@
                     card.innerHTML = `
                         <div class="flex justify-between items-start">
                             <div>
-                                <h3 class="text-white font-bold text-lg">Display: ${id.substr(0, 4)}...</h3>
+                                <h3 class="text-white font-bold text-lg">Display: ${id}</h3>
                                 <p class="text-xs text-gray-400 font-mono">${data.resolution} - ${data.userAgent.replace(/Mozilla.*?\)/, '')}</p>
                             </div>
                             <span class="px-2 py-1 rounded text-xs font-bold ${isOnline ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
@@ -120,7 +120,7 @@
         }
 
         window.sendCommand = async function (sessionId, cmd) {
-            const ref = doc(db, 'artifacts', appId, 'private', 'sessions', sessionId);
+            const ref = doc(db, 'artifacts', appId, 'sessions', sessionId);
             try {
                 await updateDoc(ref, { command: cmd });
                 console.log("Sent", cmd, "to", sessionId);
@@ -132,7 +132,7 @@
 
         window.deleteSession = async function (sessionId) {
             if (!confirm("Remove this session?")) return;
-            const ref = doc(db, 'artifacts', appId, 'private', 'sessions', sessionId);
+            const ref = doc(db, 'artifacts', appId, 'sessions', sessionId);
             await deleteDoc(ref);
         }
 

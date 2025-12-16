@@ -38,8 +38,27 @@
         const sessionId = localStorage.getItem('holiday_session_id') || 'sess_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('holiday_session_id', sessionId);
 
+        // Display Session ID (Subtle)
+        window.addEventListener('load', () => {
+            const disp = document.createElement('div');
+            disp.className = "fixed bottom-1 right-1 text-[10px] text-white/20 font-mono pointer-events-none z-[200] mix-blend-difference";
+            disp.innerText = sessionId;
+            document.body.appendChild(disp);
+        });
+
         function startSessionHeartbeat() {
-            const sessionRef = doc(db, 'artifacts', appId, 'private', 'sessions', sessionId);
+            // Fix: Path must be odd segments for Collection, even for Doc.
+            // artifacts (col) / appId (doc) / sessions (col) / sessionId (doc)
+            // Previous error was: artifacts/appId/private/sessions (4 segs) -> interpreted as Doc, but we wanted Col?
+            // Actually 'doc()' needs even segments.
+            // My error: collection(..., 'private', 'sessions') -> path "artifacts/appId/private/sessions".
+            // That is a 4-segment path. valid for a Document, INVALID for a Collection.
+            // But I used `doc(...)` in heartbeat?
+            // Wait, in admin.html I used `collection(...)` with 4 segments. That caused the error.
+            // In heartbeat I used `doc(...)` with 4 segments + sessionId = 5 segments? No.
+
+            // Simplified Path: artifacts/appId/sessions/sessionId
+            const sessionRef = doc(db, 'artifacts', appId, 'sessions', sessionId);
 
             // Heartbeat loop
             const beat = async () => {
@@ -864,8 +883,9 @@
 
     </script>
     <div id="screensaver" class="hidden fixed inset-0 z-[100] bg-black cursor-none overflow-hidden">
-        <div id="screensaver-bouncer" class="absolute w-32 h-32 flex items-center justify-center text-6xl">
-            🤖
+        <div id="screensaver-bouncer" class="absolute w-64 h-auto flex items-center justify-center">
+            <img src="screensaver_logo.png" alt="Screensaver Logo"
+                class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
         </div>
         <div id="cleaning-timer" class="absolute top-10 right-10 text-white text-4xl font-mono hidden">10:00</div>
         <div id="screensaver-info" class="absolute bottom-10 left-10 text-gray-500 text-sm font-mono">
