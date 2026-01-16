@@ -333,6 +333,9 @@
             const img = document.getElementById('overlay-image');
             if (img.src !== data.url) img.src = data.url;
 
+            // Apply Fit Mode
+            img.className = "w-full h-full " + (data.fit === 'contain' ? 'object-contain' : 'object-cover');
+
             if (data.duration !== -1) {
                 clearTimeout(overlayTimeout);
                 let remaining = data.duration; // Simple duration or calc elapsed

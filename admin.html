@@ -302,6 +302,7 @@
             async function sendToFirestore(base64Url) {
                 btn.innerText = "Sender...";
                 const duration = parseInt(document.getElementById('overlay-duration').value);
+                const fitMode = document.querySelector('input[name="fit"]:checked').value;
 
                 try {
                     const sessionRef = doc(db, 'artifacts', appId, 'sessions', currentTargetSession);
@@ -309,6 +310,7 @@
                         imageOverlay: {
                             url: base64Url,
                             duration: duration,
+                            fit: fitMode,
                             startedAt: serverTimestamp()
                         }
                     });
@@ -410,6 +412,26 @@
                         </label>
                     </div>
                     <input type="hidden" id="overlay-duration" value="10">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Tilpasning</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="fit" value="contain" class="peer sr-only">
+                            <div
+                                class="bg-slate-800 peer-checked:bg-indigo-600 peer-checked:text-white text-gray-400 py-2 rounded text-center text-sm font-bold border border-slate-700 peer-checked:border-indigo-500 transition-all">
+                                Vis Hele
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="fit" value="cover" checked class="peer sr-only">
+                            <div
+                                class="bg-slate-800 peer-checked:bg-indigo-600 peer-checked:text-white text-gray-400 py-2 rounded text-center text-sm font-bold border border-slate-700 peer-checked:border-indigo-500 transition-all">
+                                Fyll Skjerm
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="flex gap-3 mt-6">
