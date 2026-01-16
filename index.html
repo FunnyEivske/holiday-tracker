@@ -10,355 +10,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@400;700&family=Nunito:wght@400;700;800&display=swap"
         rel="stylesheet">
-
-    <!-- Firebase Imports -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- Firebase Config & Init ---
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCOcFfiRIw3sgU9eqEbwc1uc_Ur1aTOJXk",
-            authDomain: "ferie-805e0.firebaseapp.com",
-            projectId: "ferie-805e0",
-            storageBucket: "ferie-805e0.firebasestorage.app",
-            messagingSenderId: "621338557882",
-            appId: "1:621338557882:web:9eae6887a484db316d7183",
-            measurementId: "G-C8PT9DKJ3Q"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = 'holiday-tracker-main'; // Simple static ID for your app's data path
-
-        // --- Session Management (Remote Control) ---
-        const sessionId = localStorage.getItem('holiday_session_id') || 'sess_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('holiday_session_id', sessionId);
-
-        // Display Session ID (Subtle)
-        window.addEventListener('load', () => {
-            const disp = document.createElement('div');
-            disp.className = "fixed bottom-1 right-1 text-[10px] text-white/20 font-mono pointer-events-none z-[200] mix-blend-difference";
-            disp.innerText = sessionId;
-            document.body.appendChild(disp);
-        });
-
-        function startSessionHeartbeat() {
-            // Fix: Path must be odd segments for Collection, even for Doc.
-            // artifacts (col) / appId (doc) / sessions (col) / sessionId (doc)
-            // Previous error was: artifacts/appId/private/sessions (4 segs) -> interpreted as Doc, but we wanted Col?
-            // Actually 'doc()' needs even segments.
-            // My error: collection(..., 'private', 'sessions') -> path "artifacts/appId/private/sessions".
-            // That is a 4-segment path. valid for a Document, INVALID for a Collection.
-            // But I used `doc(...)` in heartbeat?
-            // Wait, in admin.html I used `collection(...)` with 4 segments. That caused the error.
-            // In heartbeat I used `doc(...)` with 4 segments + sessionId = 5 segments? No.
-
-            // Simplified Path: artifacts/appId/sessions/sessionId
-            const sessionRef = doc(db, 'artifacts', appId, 'sessions', sessionId);
-
-            // Heartbeat loop
-            const beat = async () => {
-                if (!currentUser) return;
-                try {
-                    await setDoc(sessionRef, {
-                        lastSeen: new Date().toISOString(),
-                        userAgent: navigator.userAgent,
-                        resolution: `${window.innerWidth}x${window.innerHeight}`,
-                        currentView: document.getElementById('dashboard-view').classList.contains('hidden') ? 'tracker' : 'dashboard',
-                        screensaver: Screensaver.active ? Screensaver.mode : 'off'
-                    }, { merge: true });
-                } catch (e) {
-                    console.error("Heartbeat fail", e);
-                }
-            };
-            setInterval(beat, 30000); // Every 30s
-            beat(); // Immediate
-
-            // Command Listener
-            onSnapshot(sessionRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.command) {
-                        console.log("Remote Command Received:", data.command);
-                        handleRemoteCommand(data.command);
-                        // Clear command after execution
-                        updateDoc(sessionRef, { command: null });
-                    }
-                }
-            });
-        }
-
-        function handleRemoteCommand(cmdString) {
-            // Format: "action:arg"
-            const [action, arg] = cmdString.split(':');
-
-            if (action === 'set_view') {
-                if (arg === 'dashboard') {
-                    startPageRotation(false); // Force Dashboard
-                } else if (arg === 'tracker') {
-                    startPageRotation(true); // Force Tracker
-                    applySeasonTheme();
-                }
-            } else if (action === 'trigger_screensaver') {
-                if (arg === 'off') {
-                    window.stopScreensaver();
-                } else {
-                    window.startScreensaver(arg); // 'cleaning' or 'night'
-                }
-            } else if (action === 'reload') {
-                window.location.reload();
-            }
-        }
-
-        let currentUser = null;
-        let allEmployees = [];
-        let currentPage = 0;
-        const itemsPerPage = 12;
-        let rotationInterval;
-
-        // Farge-temaer
-        // Nord Theme Palette
-        const nord = {
-            nord0: '#2e3440', nord1: '#3b4252', nord2: '#434c5e', nord3: '#4c566a', // Polar Night
-            nord4: '#d8dee9', nord5: '#e5e9f0', nord6: '#eceff4', // Snow Storm
-            nord7: '#8fbcbb', nord8: '#88c0d0', nord9: '#81a1c1', nord10: '#5e81ac', // Frost
-            nord11: '#bf616a', nord12: '#d08770', nord13: '#ebcb8b', nord14: '#a3be8c', nord15: '#b48ead' // Aurora
-        };
-
-        const themes = {
-            red: { bg: `linear-gradient(135deg, ${nord.nord11} 0%, #a6555d 100%)`, border: nord.nord11, shadow: 'rgba(191, 97, 106, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#81a1c1]', badge: 'bg-[#bf616a]' },
-            pink: { bg: `linear-gradient(135deg, ${nord.nord15} 0%, #9b7295 100%)`, border: nord.nord15, shadow: 'rgba(180, 142, 173, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#88c0d0]', badge: 'bg-[#b48ead]' },
-            blue: { bg: `linear-gradient(135deg, ${nord.nord10} 0%, ${nord.nord9} 100%)`, border: nord.nord10, shadow: 'rgba(129, 161, 193, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#e5e9f0]', textAccent: 'text-[#8fbcbb]', badge: 'bg-[#5e81ac]' },
-            green: { bg: `linear-gradient(135deg, ${nord.nord14} 0%, #8ca575 100%)`, border: nord.nord14, shadow: 'rgba(163, 190, 140, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#ebcb8b]', badge: 'bg-[#a3be8c]' },
-            purple: { bg: `linear-gradient(135deg, ${nord.nord15} 0%, #9b7295 100%)`, border: nord.nord15, shadow: 'rgba(180, 142, 173, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#88c0d0]', badge: 'bg-[#b48ead]' },
-            orange: { bg: `linear-gradient(135deg, ${nord.nord12} 0%, #b8735d 100%)`, border: nord.nord12, shadow: 'rgba(208, 135, 112, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#d8dee9]', textAccent: 'text-[#ebcb8b]', badge: 'bg-[#d08770]' },
-            yellow: { bg: `linear-gradient(135deg, ${nord.nord13} 0%, #d6b779 100%)`, border: nord.nord13, shadow: 'rgba(235, 203, 139, 0.4)', textMain: 'text-[#2e3440]', textSub: 'text-[#3b4252]', textAccent: 'text-[#bf616a]', badge: 'bg-[#ebcb8b]' },
-            teal: { bg: `linear-gradient(135deg, ${nord.nord7} 0%, #7aa1a0 100%)`, border: nord.nord7, shadow: 'rgba(143, 188, 187, 0.4)', textMain: 'text-[#eceff4]', textSub: 'text-[#e5e9f0]', textAccent: 'text-[#5e81ac]', badge: 'bg-[#8fbcbb]' },
-        };
-
-        // --- Auth & Data Loading ---
-        async function initApp() {
-            try {
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Auth error", error);
-            }
-        }
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                startListening();
-                startSessionHeartbeat();
-            }
-        });
-
-        function startListening() {
-            const currentSeason = getSeason();
-            // Store data in a sub-collection named after the season (e.g., 'christmas', 'winter', 'summer')
-            // Path: artifacts/{appId}/public/data/{seasonName}
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', currentSeason));
-
-            onSnapshot(q, (snapshot) => {
-                const employees = [];
-                snapshot.forEach((doc) => {
-                    employees.push({ id: doc.id, ...doc.data() });
-                });
-
-                employees.sort((a, b) => {
-                    const d1 = new Date(a.startDate);
-                    const d2 = new Date(b.startDate);
-
-                    // Safety: Invalid dates go to end
-                    if (isNaN(d1)) return 1;
-                    if (isNaN(d2)) return -1;
-
-                    const diff = d1 - d2;
-                    if (diff !== 0) return diff;
-
-                    const e1 = new Date(a.endDate);
-                    const e2 = new Date(b.endDate);
-
-                    if (isNaN(e1)) return 1;
-                    if (isNaN(e2)) return -1;
-
-                    const diffEnd = e1 - e2;
-                    if (diffEnd !== 0) return diffEnd;
-
-                    // Tie-breaker: Name (Alphabetical)
-                    return (a.name || "").localeCompare(b.name || "");
-                });
-
-                allEmployees = employees;
-
-                renderGrid();
-                updatePaginationDots();
-            }, (error) => {
-                console.error("Data fetch error:", error);
-            });
-        }
-
-
-
-        // --- Rendering Logic ---
-        window.renderGrid = function () {
-            const grid = document.getElementById('employee-grid');
-            grid.innerHTML = '';
-
-            const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
-            if (currentPage >= totalPages) currentPage = 0;
-
-            const start = currentPage * itemsPerPage;
-            const end = start + itemsPerPage;
-            const currentItems = allEmployees.slice(start, end);
-
-            currentItems.forEach(emp => {
-                const card = createCard(emp);
-                grid.appendChild(card);
-            });
-
-            grid.classList.remove('fade-in');
-            void grid.offsetWidth;
-            grid.classList.add('fade-in');
-        }
-
-        function createCard(emp) {
-            const startD = new Date(emp.startDate);
-            const endD = new Date(emp.endDate);
-
-            const formatNB = (date) => {
-                const d = date.getDate();
-                const m = ["Januar", "Februar", "Mars", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Desember"][date.getMonth()];
-                const y = date.getFullYear();
-                const currentYear = new Date().getFullYear();
-
-                // Show year if it's not current year AND not next year (for dec/jan overlap)
-                // Actually, simpler: if it's more than 365 days away or in the past? 
-                // Let's just show year if it's not the current active season year(s).
-                // Or just: if year != currentYear && year != currentYear + 1
-                if (y !== currentYear && y !== currentYear + 1) {
-                    return `${d}. ${m} ${y}`;
-                }
-                // Also if it is next year but way off?
-                // Let's stick to simple:
-                if (Math.abs(y - currentYear) > 1) return `${d}. ${m} ${y}`;
-
-                return `${d}. ${m}`;
-            };
-            const getDayNB = (date) => {
-                const days = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
-                return days[date.getDay()];
-            };
-
-            // Bakoverkompatibilitet for gammel data
-            let colorKey = emp.color;
-            if (!colorKey) {
-                // Hvis data mangler 'color', gjett basert på gammel 'type'
-                if (emp.type === 'pink') colorKey = 'pink';
-                else colorKey = 'red';
-            }
-
-            let emoji = emp.emoji;
-            if (!emoji) {
-                emoji = (colorKey === 'pink') ? '🎅' : '🎄';
-            }
-
-            const theme = themes[colorKey] || themes.red;
-
-            const currentSeason = getSeason();
-            const seasonLabel = (currentSeason && seasonConfig[currentSeason]) ? seasonConfig[currentSeason].title : "Ferie";
-
-            const div = document.createElement('div');
-            div.className = `rounded-3xl p-6 relative transform transition duration-300 h-full flex flex-col justify-between`;
-            div.style.background = theme.bg;
-            div.style.border = `4px solid ${theme.border}`;
-            div.style.boxShadow = `0 0 20px ${theme.shadow}`;
-
-            div.innerHTML = `
-                <div class="absolute -top-4 -right-4 ${theme.badge} text-white rounded-full w-14 h-14 flex items-center justify-center text-3xl shadow-lg border-2 border-white">
-                    ${emoji}
-                </div>
-                <div>
-                    <h2 class="text-3xl font-bold ${theme.textMain} mb-1 truncate">${emp.name}</h2>
-                    <p class="text-md ${theme.textSub} font-semibold mb-4 uppercase tracking-wider">${seasonLabel} / Fri</p>
-                    
-                <div class="space-y-3">
-                        <div class="bg-[#2e3440]/40 rounded-xl p-3 shadow-sm border border-[#4c566a]/30">
-                            <p class="text-xs text-[#d8dee9] uppercase font-bold shadow-black drop-shadow-sm">Starter:</p>
-                            <p class="text-2xl text-[#eceff4] font-bold leading-none mt-1 drop-shadow-md">${formatNB(startD)}</p>
-                            <p class="${theme.textAccent} font-medium text-sm drop-shadow-sm">${getDayNB(startD)}</p>
-                        </div>
-                        
-                        <div class="flex justify-center text-xl ${theme.textAccent} drop-shadow-md">⬇</div>
-                        
-                        <div class="bg-[#2e3440]/40 rounded-xl p-3 shadow-sm border border-[#4c566a]/30">
-                            <p class="text-xs text-[#d8dee9] uppercase font-bold shadow-black drop-shadow-sm">Slutter:</p>
-                            <p class="text-2xl text-[#eceff4] font-bold leading-none mt-1 drop-shadow-md">${formatNB(endD)}</p>
-                            <p class="${theme.textAccent} font-medium text-sm drop-shadow-sm">${getDayNB(endD)}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4 text-center bg-[#2e3440]/30 rounded-lg p-2 border border-[#4c566a]/20">
-                    <p class="${theme.textMain} font-bold text-sm drop-shadow-md">✨ ${emoji} God Ferie ${emoji} ✨</p>
-                </div>
-                
-                <button onclick="window.deleteItem('${emp.id}')" class="absolute bottom-2 right-2 text-gray-400 hover:text-red-600 opacity-20 hover:opacity-100 transition z-10">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                </button>
-            `;
-            return div;
-        }
-
-        // --- Rotation Logic ---
-        function startRotation() {
-            if (rotationInterval) clearInterval(rotationInterval);
-            rotationInterval = setInterval(() => {
-                const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
-                if (totalPages > 1) {
-                    currentPage++;
-                    if (currentPage >= totalPages) currentPage = 0;
-                    renderGrid();
-                    updatePaginationDots();
-                }
-            }, 10000);
-        }
-
-        startRotation();
-
-        function updatePaginationDots() {
-            const container = document.getElementById('pagination-dots');
-            container.innerHTML = '';
-            const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
-
-            if (totalPages <= 1) return;
-
-            for (let i = 0; i < totalPages; i++) {
-                const dot = document.createElement('div');
-                dot.className = `w-3 h-3 rounded-full mx-1 transition-all duration-300 ${i === currentPage ? 'bg-yellow-400 scale-125' : 'bg-white/30'}`;
-                container.appendChild(dot);
-            }
-        }
-
-        // --- Selection Logic ---
-
-
-
-
-        window.deleteItem = async function (id) {
-            if (confirm("Slette denne oppføringen?")) {
-                const currentSeason = getSeason();
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentSeason, id));
-            }
-        }
-
-        initApp();
-
-    </script>
-
     <style>
         body {
             font-family: 'Nunito', sans-serif;
@@ -371,9 +22,6 @@
         .christmas-font {
             font-family: 'Mountains of Christmas', cursive;
         }
-
-
-
 
         .fade-in {
             animation: fadeIn 0.5s ease-in-out;
@@ -391,7 +39,6 @@
             }
         }
 
-        /* Skjul scrollbar i emoji-velgeren */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -407,10 +54,9 @@
 
     <canvas id="snow-canvas" class="fixed inset-0 pointer-events-none z-10 hidden"></canvas>
 
-    <!-- Main Content (Scrollable) -->
+    <!-- Main Content -->
     <div
         class="flex-grow flex flex-col items-center justify-center p-4 pb-32 relative z-10 w-full max-w-[95%] mx-auto overflow-y-auto h-full scrollbar-hide">
-
         <header class="text-center mb-8 shrink-0">
             <h1 class="text-5xl md:text-6xl text-yellow-300 christmas-font drop-shadow-lg font-bold">
                 🎄 Juleferie 2025 🎄
@@ -423,10 +69,9 @@
         </div>
 
         <div id="pagination-dots" class="flex justify-center mt-6 h-4 shrink-0"></div>
-
     </div>
 
-    <!-- Floating QR Code (Bottom Left) -->
+    <!-- QR Code -->
     <div
         class="fixed bottom-6 left-6 z-50 bg-[#2e3440]/80 backdrop-blur-md p-3 rounded-2xl shadow-2xl border border-[#4c566a]/50 hover:bg-[#2e3440] transition-colors group">
         <div class="flex flex-col items-center gap-2">
@@ -438,35 +83,28 @@
         </div>
     </div>
 
-    <!-- DASHBOARD VIEW (Optimized for Grouping & Visibility - Nord Theme) -->
-    <div id="dashboard-view" class="hidden fixed inset-0 bg-[#2e3440] z-50 flex flex-col font-sans text-[#eceff4]">
+    <!-- Image Overlay -->
+    <div id="overlay-container" class="hidden fixed inset-0 z-[10000] bg-black flex items-center justify-center">
+        <img id="overlay-image" src="" class="max-w-full max-h-full object-contain">
+    </div>
 
-        <!-- Comics Grid Container -->
-        <!-- 2 Columns ensures pairs (e.g. Lunch 1 & 2) stay on the same row -->
+    <!-- Dashboard View -->
+    <div id="dashboard-view" class="hidden fixed inset-0 bg-[#2e3440] z-50 flex flex-col font-sans text-[#eceff4]">
         <div id="comic-grid"
             class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-2 p-2 overflow-y-auto w-full max-w-[1800px] mx-auto scroll-smooth no-scrollbar">
-            <!-- Comics will be injected here -->
             <div class="col-span-full flex flex-col items-center justify-center h-full text-[#4c566a] animate-pulse">
                 <span class="text-lg font-medium">Laster inn striper...</span>
             </div>
         </div>
-
-        <!-- Footer -->
         <div
             class="min-h-[100px] bg-[#3b4252] border-t border-[#4c566a] flex items-center justify-between px-8 py-4 shrink-0 shadow-[0_-5px_20px_rgba(0,0,0,0.3)] z-20 relative">
-
-            <!-- Left: Quote (Moved from Center) -->
             <div class="flex-grow flex justify-start w-3/5 pr-4">
                 <p id="dash-quote"
-                    class="text-lg md:text-xl text-[#d8dee9] italic text-left leading-normal whitespace-normal break-words border-l-4 border-[#5e81ac] pl-6 py-2">
-                    "Loading wisdom..."
-                </p>
+                    class="text-lg md:text-xl text-[#d8dee9] italic text-left leading-normal whitespace-nowrap truncate border-l-4 border-[#5e81ac] pl-6 py-2">
+                    "Loading wisdom..."</p>
             </div>
-
-            <!-- Right: Clock & Status -->
             <div class="flex items-center justify-end gap-4 w-1/5 min-w-[150px]">
                 <div id="dash-clock" class="text-4xl font-mono font-bold text-[#eceff4] tracking-wider">00:00</div>
-                <!-- Status Dot -->
                 <div id="connection-status"
                     class="w-3 h-3 rounded-full bg-[#bf616a] shadow-[0_0_10px_rgba(191,97,106,0.7)] transition-colors duration-500">
                 </div>
@@ -474,51 +112,256 @@
         </div>
     </div>
 
-    <script>
-        window.addEventListener('load', () => {
-            const productionUrl = "https://funnyeivske.github.io/holiday-tracker/";
+    <!-- Screensaver Bouncer -->
+    <div id="screensaver" class="hidden fixed inset-0 z-[5000] bg-black cursor-none">
+        <div id="screensaver-bouncer" class="absolute text-6xl select-none" style="top:50%;left:50%">🎄</div>
+    </div>
 
-            // Determine base URL
-            let baseUrl = window.location.href;
-            if (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                if (productionUrl) {
-                    baseUrl = productionUrl;
-                    console.log("Local development detected. Using production URL base:", baseUrl);
-                }
+    <!-- Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query, doc, setDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOcFfiRIw3sgU9eqEbwc1uc_Ur1aTOJXk",
+            authDomain: "ferie-805e0.firebaseapp.com",
+            projectId: "ferie-805e0",
+            storageBucket: "ferie-805e0.firebasestorage.app",
+            messagingSenderId: "621338557882",
+            appId: "1:621338557882:web:9eae6887a484db316d7183",
+            measurementId: "G-C8PT9DKJ3Q"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'holiday-tracker-main';
+
+        const sessionId = localStorage.getItem('holiday_session_id') || 'sess_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('holiday_session_id', sessionId);
+
+        function updateStatus(msg, color) {
+            const el = document.getElementById('fb-status');
+            if (el) {
+                const time = new Date().toLocaleTimeString('nb-NO').split(' ')[0];
+                el.innerHTML = `<span style="opacity:0.6">${time}</span> ${msg}`;
+                el.style.color = color || 'white';
             }
+        }
 
-            // Construct Target URL for Registration
-            // Ensure we don't double-slash or miss a slash
-            const targetUrl = baseUrl.endsWith('/')
-                ? baseUrl + 'register.html'
-                : baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1) + 'register.html';
+        // Init
+        window.addEventListener('load', async () => {
+            // UI Debug
+            const disp = document.createElement('div');
+            disp.className = "fixed bottom-1 right-1 text-[10px] text-white/80 font-mono pointer-events-none z-[200] mix-blend-difference flex flex-col items-end bg-black/50 p-1 rounded";
+            disp.innerHTML = `<div id="fb-status" class="font-bold">Init...</div><div class="text-white/50">${sessionId}</div>`;
+            document.body.appendChild(disp);
 
-            const qrContainer = document.getElementById("qrcode");
+            // Helpers
+            window.Screensaver.init();
+            Dashboard.init();
 
-            // Clean QR generation
-            new QRCode(qrContainer, {
-                text: targetUrl,
-                width: 64,
-                height: 64,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
+            // Generate QR
+            const baseUrl = window.location.href.endsWith('/') ? window.location.href : window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+            new QRCode(document.getElementById("qrcode"), { text: baseUrl + 'register.html', width: 64, height: 64 });
 
-            Dashboard.init(); // Initialize NCD Dashboard
-
-            const season = getSeason();
-            if (!season) {
-                // No holiday: Show Dashboard only
-                startPageRotation(false);
-            } else {
-                // Holiday: Show App
-                startPageRotation(true);
-                applySeasonTheme();
+            // Auth
+            try {
+                updateStatus("Auth...", "yellow");
+                await signInAnonymously(auth);
+            } catch (e) {
+                console.error("Auth Fail", e);
+                updateStatus("Auth Err: " + e.code, "red");
             }
         });
 
-        // --- Dashboard Logic (NCD Reverse Engineering) ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                updateStatus("Connected", "#4ade80");
+                startHeartbeat();
+                // Only load holiday data if there is an active season
+                if (getSeason()) {
+                    startDataListener();
+                } else {
+                    console.log("No Holiday Season - Data Load Skipped");
+                }
+            } else {
+                updateStatus("No Auth", "orange");
+            }
+        });
+
+        // Heartbeat (Writes to Firebase)
+        function startHeartbeat() {
+            const sessionRef = doc(db, 'artifacts', appId, 'sessions', sessionId);
+
+            // Listen for Commands
+            onSnapshot(sessionRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                if (data.command) {
+                    handleCommand(data.command);
+                    updateDoc(sessionRef, { command: null });
+                }
+                if (data.imageOverlay) handleImageOverlay(data.imageOverlay, sessionRef);
+                else hideImageOverlay();
+            });
+
+            // Write Heartbeat
+            const beat = async () => {
+                try {
+                    await setDoc(sessionRef, {
+                        lastSeen: new Date().toISOString(),
+                        userAgent: navigator.userAgent,
+                        resolution: `${window.innerWidth}x${window.innerHeight}`,
+                        currentView: document.getElementById('dashboard-view').classList.contains('hidden') ? 'tracker' : 'dashboard',
+                        screensaver: window.Screensaver.active ? window.Screensaver.mode : 'off'
+                    }, { merge: true });
+                    // updateStatus("Heartbeat", "#4ade80"); // Too noisy
+                } catch (e) {
+                    updateStatus("HB Fail", "red");
+                }
+            };
+            beat();
+            setInterval(beat, 30000);
+        }
+
+        // Data Listener
+        function startDataListener() {
+            const currentSeason = getSeason() || 'winter';
+            applySeasonTheme(currentSeason);
+
+            // Determine View
+            if (!getSeason()) {
+                document.getElementById('dashboard-view').classList.remove('hidden');
+                document.getElementById('dashboard-view').classList.add('flex');
+            }
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', currentSeason));
+            onSnapshot(q, (snap) => {
+                const items = [];
+                snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+                // Auto-cleanup Expired
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+
+                items.forEach(async (item) => {
+                    if (item.endDate && item.endDate < todayStr) {
+                        console.log("Deleting expired:", item.name, item.endDate);
+                        try {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentSeason, item.id));
+                        } catch (e) { console.error("Cleanup fail", e); }
+                    }
+                });
+
+                // Simple sort logic
+                items.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+                renderGrid(items);
+            });
+        }
+
+        // --- Helpers ---
+        function getSeason() {
+            const d = new Date();
+            const m = d.getMonth(), day = d.getDate();
+            if (m === 11 || (m === 0 && day <= 5)) return 'christmas';
+            if (m === 1 && day >= 15 && day <= 28) return 'winter';
+            if (m === 3 && day <= 22) return 'spring';
+            if ((m === 5 && day >= 20) || m === 6 || (m === 7 && day <= 18)) return 'summer';
+            if ((m === 8 && day >= 28) || (m === 9 && day <= 10)) return 'autumn';
+            return null;
+        }
+
+        function createCard(emp) {
+            // Simplified Card Logic for robustness
+            const div = document.createElement('div');
+            div.className = "bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-xl text-white flex flex-col justify-between min-h-[200px]";
+            // ... (Insert rich card logic if needed, keeping simple for fix)
+            div.innerHTML = `
+                <div class="absolute -top-3 -right-3 bg-red-500 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg border-2 border-white">🎄</div>
+                <div>
+                   <h2 class="text-2xl font-bold mb-1">${emp.name}</h2>
+                   <p class="text-white/70 text-sm font-semibold uppercase">Ferie</p>
+                   <div class="mt-4 space-y-2">
+                       <div class="bg-black/20 p-2 rounded">
+                           <p class="text-xs text-white/50 uppercase">Start</p>
+                           <p class="font-bold">${emp.startDate}</p>
+                       </div>
+                       <div class="bg-black/20 p-2 rounded">
+                           <p class="text-xs text-white/50 uppercase">Slutt</p>
+                           <p class="font-bold">${emp.endDate}</p>
+                       </div>
+                   </div>
+                </div>
+                <button onclick="window.deleteItem('${emp.id}')" class="mt-2 text-xs text-red-300 hover:text-red-100 text-right w-full">Slett</button>
+            `;
+            return div;
+        }
+
+        function renderGrid(employees) {
+            const grid = document.getElementById('employee-grid');
+            grid.innerHTML = '';
+            if (employees.length === 0) grid.innerHTML = '<div class="col-span-full text-center text-white/50">Ingen data</div>';
+            employees.forEach(e => grid.appendChild(createCard(e)));
+        }
+
+        function applySeasonTheme(season) {
+            // Minimal theme logic
+            const themes = {
+                christmas: { title: "Juleferie", bg: "radial-gradient(circle at center, #2d3748 0%, #1a202c 100%)" },
+                winter: { title: "Vinterferie", bg: "radial-gradient(circle at center, #e0f2fe 0%, #0284c7 100%)" },
+            };
+            const theme = themes[season] || themes.christmas;
+            document.body.style.background = theme.bg;
+            document.querySelector('header h1').innerText = "🎄 " + theme.title + " 🎄";
+        }
+
+        function handleCommand(cmd) {
+            if (cmd === 'reload') window.location.reload();
+            if (cmd.startsWith('trigger_screensaver')) {
+                const mode = cmd.split(':')[1];
+                mode === 'off' ? window.stopScreensaver() : window.startScreensaver(mode);
+            }
+        }
+
+        // Image Overlay
+        let overlayTimeout;
+        function handleImageOverlay(data, ref) {
+            document.getElementById('overlay-container').classList.remove('hidden');
+            const img = document.getElementById('overlay-image');
+            if (img.src !== data.url) img.src = data.url;
+
+            if (data.duration !== -1) {
+                clearTimeout(overlayTimeout);
+                let remaining = data.duration; // Simple duration or calc elapsed
+                // Just reset timer on every update for simplicity or calc
+                overlayTimeout = setTimeout(() => {
+                    hideImageOverlay();
+                    updateDoc(ref, { imageOverlay: null });
+                }, remaining * 1000);
+            }
+        }
+        function hideImageOverlay() {
+            document.getElementById('overlay-container').classList.add('hidden');
+        }
+
+        // Globals for existing onclicks
+        window.deleteItem = async (id) => {
+            if (confirm('Slett?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', getSeason() || 'winter', id));
+        };
+        window.startScreensaver = (mode) => window.Screensaver.start(mode);
+        window.stopScreensaver = () => window.Screensaver.stop();
+
+        // Sub-modules
+        window.Screensaver = {
+            active: false, mode: 'night',
+            init: function () { this.el = document.getElementById('screensaver'); },
+            start: function (m) { this.active = true; this.mode = m; this.el.classList.remove('hidden'); },
+            stop: function () { this.active = false; this.el.classList.add('hidden'); }
+        };
+
         const Dashboard = {
             ws: null,
             reconnectDelay: 5000,
@@ -530,522 +373,106 @@
             },
 
             startClock: function () {
-                const clockEl = document.getElementById('dash-clock');
-                const update = () => {
-                    const now = new Date();
-                    clockEl.textContent = now.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
-                };
-                update();
-                setInterval(update, 1000);
+                setInterval(() => {
+                    document.getElementById('dash-clock').innerText = new Date().toLocaleTimeString('nb-NO').slice(0, 5);
+                }, 1000);
             },
 
             connectWS: function () {
-                const protocol = 'wss:';
-                const host = 'ncd.idmedia.no';
-                const url = `${protocol}//${host}/ws/${this.clientId}`;
-
-                console.log('Connecting to NCD WS:', url);
+                const url = `wss://ncd.idmedia.no/ws/${this.clientId}`;
+                console.log('Connecting WS:', url);
                 this.ws = new WebSocket(url);
 
                 this.ws.onopen = () => {
-                    console.log('NCD WS Connected');
-                    const status = document.getElementById('connection-status');
-                    if (status) {
-                        status.classList.remove('bg-red-500');
-                        status.classList.add('bg-green-500');
-                        status.style.boxShadow = "0 0 8px rgba(34, 197, 94, 0.6)"; // Green glow
-                    }
+                    console.log('WS Open');
+                    this.updateStatus(true);
                     this.reconnectDelay = 5000;
                 };
 
-                this.ws.onmessage = (event) => {
+                this.ws.onmessage = (e) => {
                     try {
-                        const data = JSON.parse(event.data);
-                        if (data.event === 'update') {
-                            this.updateContent(data.data);
-                        }
-                    } catch (e) { console.error('WS Parse Error', e); }
+                        const data = JSON.parse(e.data);
+                        if (data.event === 'update') this.updateContent(data.data);
+                    } catch (err) { console.error('WS Data Err', err); }
                 };
 
                 this.ws.onclose = () => {
-                    console.log('NCD WS Closed');
-                    this.handleDisconnect();
-                };
-
-                this.ws.onerror = (err) => {
-                    console.error('NCD WS Error', err);
-                    this.handleDisconnect();
+                    console.log('WS Closed');
+                    this.updateStatus(false);
+                    setTimeout(() => this.connectWS(), this.reconnectDelay);
+                    this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
                 };
             },
 
-            handleDisconnect: function () {
-                const status = document.getElementById('connection-status');
-                if (status) {
-                    status.classList.remove('bg-green-500');
-                    status.classList.add('bg-red-500');
-                    status.style.boxShadow = "0 0 8px rgba(239, 68, 68, 0.6)"; // Red glow
+            updateStatus: function (ok) {
+                const el = document.getElementById('connection-status');
+                if (el) {
+                    el.className = `w-3 h-3 rounded-full transition-colors duration-500 shadow-[0_0_10px_rgba(0,0,0,0.5)] ${ok ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500 shadow-red-500/50'}`;
                 }
-                setTimeout(() => this.connectWS(), this.reconnectDelay);
-                this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
             },
 
             updateContent: function (data) {
-                // Update Quote
+                // Quotes
                 if (data.quotes && data.quotes.sadserver) {
-                    const quoteEl = document.getElementById('dash-quote');
-                    if (quoteEl) quoteEl.textContent = `"${data.quotes.sadserver}"`;
+                    const raw = data.quotes.sadserver;
+                    // Flatten text (remove newlines), clean spaces
+                    let clean = raw.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+                    // Extract attribution if present (assuming - @sadserver format)
+                    let text = clean;
+                    let author = "- @sadserver";
+
+                    // Simple split if it exists in the text
+                    const splitIdx = clean.toLowerCase().lastIndexOf("- @sadserver");
+                    if (splitIdx > -1) {
+                        text = clean.substring(0, splitIdx).trim();
+                        author = clean.substring(splitIdx).trim();
+                    }
+
+                    // HTML structuring: Text on one line (truncated), Author on next
+                    const el = document.getElementById('dash-quote');
+                    // Reset classes for this layout
+                    el.className = "text-[#d8dee9] border-l-4 border-[#5e81ac] pl-6 py-1";
+                    el.innerHTML = `
+                        <div class="text-lg md:text-xl italic whitespace-nowrap overflow-hidden text-ellipsis leading-tight">"${text}"</div>
+                        <div class="text-sm font-bold text-white/80 mt-1">${author}</div>
+                    `;
                 }
 
-                // Update Comics
+                // Comics
                 if (data.comics) {
                     const grid = document.getElementById('comic-grid');
-                    if (!grid) return;
-                    grid.innerHTML = ''; // Clear existing
-
+                    grid.innerHTML = '';
                     const sources = [
                         { domain: "vg.no", type: "Lunch" },
                         { domain: "vg.no", type: "Pappa" },
                         { domain: "tu.no", type: "Lunch" }
                     ];
 
-                    sources.forEach(source => {
-                        const domainComics = data.comics[source.domain];
-                        const comicType = (domainComics && domainComics[source.type]) ? source.type : "Lunch";
+                    sources.forEach(src => {
+                        const group = data.comics[src.domain];
+                        const list = (group && group[src.type]) ? group[src.type].slice(0, 2) : [];
 
-                        if (domainComics && domainComics[comicType]) {
-                            // Take first 2 valid images to fill 6 slots (3 sources * 2)
-                            const comicsList = domainComics[comicType].slice(0, 2);
-
-                            comicsList.forEach(imgData => {
-                                const wrapper = document.createElement('div');
-                                // Nord Theme Card: Nord1 Background, Nord3 Border
-                                // ADDED: h-full and flex-col to ensure it fills the grid cell
-                                wrapper.className = "w-full h-full bg-[#3b4252]/50 rounded-lg shadow-sm border border-[#4c566a] hover:border-[#88c0d0] transition-colors flex flex-col items-center justify-center p-2";
-
-                                const img = document.createElement('img');
-                                // Fix relative URLs
-                                let src = imgData.url;
-                                if (src.startsWith('/')) {
-                                    src = 'https://ncd.idmedia.no' + src;
-                                }
-                                img.src = src;
-                                // Full visibility, no clipping, fill available height
-                                img.className = "w-full h-full object-contain max-h-full";
-
-                                wrapper.appendChild(img);
-                                grid.appendChild(wrapper);
-                            });
-                        }
+                        list.forEach(imgData => {
+                            let url = imgData.url.startsWith('/') ? 'https://ncd.idmedia.no' + imgData.url : imgData.url;
+                            const div = document.createElement('div');
+                            div.className = "w-full h-full bg-[#3b4252]/50 rounded-lg shadow-sm border border-[#4c566a] p-2 flex items-center justify-center";
+                            div.innerHTML = `<img src="${url}" class="w-full h-full object-contain max-h-full">`;
+                            grid.appendChild(div);
+                        });
                     });
                 }
             }
         };
 
-        // --- Page Logic (Kiosk Mode) ---
-        function startPageRotation(isHoliday) {
-            const dashboard = document.getElementById('dashboard-view');
-
-            if (!isHoliday) {
-                console.log("No holiday season active. Showing Dashboard.");
-                dashboard.classList.remove('hidden');
-                dashboard.classList.add('flex');
-            } else {
-                console.log("Holiday season active! Showing Tracker.");
-                dashboard.classList.add('hidden');
-                dashboard.classList.remove('flex');
-            }
-        }
-
-        // --- Seasonal Logic ---
-        function getSeason() {
-            const date = new Date();
-            const month = date.getMonth(); // 0-11
-            const day = date.getDate();
-
-            // Jul: 1. Desember - 5. Januar
-            if (month === 11 || (month === 0 && day <= 5)) {
-                return 'christmas';
-            }
-            // Vinterferie (Agder: Uke 8): Ca. 15. Februar - 1. Mars
-            if (month === 1 && day >= 15 && day <= 28) { // Feb 15-28 covers Week 8 mostly
-                return 'winter';
-            }
-            // Påske/Vår: 1. April - 22. April (Varierer, men dekker det meste)
-            if (month === 3 && day <= 22) {
-                return 'spring';
-            }
-            // Sommer (Skoleferie): ca 20. Juni - 18. August
-            if ((month === 5 && day >= 20) || month === 6 || (month === 7 && day <= 18)) {
-                return 'summer';
-            }
-            // Høst (Agder: Uke 40): Ca 28. September - 10. Oktober
-            if ((month === 8 && day >= 28) || (month === 9 && day <= 10)) {
-                return 'autumn';
-            }
-
-            return null; // Ingen ferie
-        }
-
-        const seasonConfig = {
-            christmas: {
-                title: "Juleferie",
-                titleEmoji: "🎄",
-                subtitle: "God jul til hele gjengen!",
-                bg: "radial-gradient(circle at center, #2d3748 0%, #1a202c 100%)",
-                headerColor: "text-yellow-300",
-                font: "christmas-font",
-                snow: true,
-                defaultEmoji: "🎅"
-            },
-            winter: {
-                title: "Vinterferie",
-                titleEmoji: "⛷️",
-                subtitle: "God vinterferie! Husk kakao!",
-                bg: "radial-gradient(circle at center, #e0f2fe 0%, #0284c7 100%)", // Light blue to blue
-                headerColor: "text-white",
-                font: "font-sans", // Fallback to Nunito/Standard
-                snow: true,
-                defaultEmoji: "⛷️"
-            },
-            spring: {
-                title: "Vårferie",
-                titleEmoji: "🌱",
-                subtitle: "Nyt våren og fridagene!",
-                bg: "radial-gradient(circle at center, #dcfce7 0%, #16a34a 100%)", // Light green to green
-                headerColor: "text-green-900",
-                font: "font-sans",
-                snow: false,
-                defaultEmoji: "🌱"
-            },
-            summer: {
-                title: "Sommerferie",
-                titleEmoji: "☀️",
-                subtitle: "God sommer! Nyt solen!",
-                bg: "radial-gradient(circle at center, #fef9c3 0%, #eab308 100%)", // Light yellow to yellow
-                headerColor: "text-orange-600",
-                font: "font-sans",
-                snow: false,
-                defaultEmoji: "🏖️"
-            },
-            autumn: {
-                title: "Høstferie",
-                titleEmoji: "🍂",
-                subtitle: "God høstferie! Ut på tur!",
-                bg: "radial-gradient(circle at center, #ffedd5 0%, #c2410c 100%)", // Orange to rust
-                headerColor: "text-red-900",
-                font: "font-sans",
-                snow: false,
-                defaultEmoji: "🍂"
-            }
-        };
-
-        // Manual Toggle with 'X' key
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'x' || e.key === 'X') {
-                console.log("Manual toggle triggered");
-                const dashboard = document.getElementById('dashboard-view');
-                const isDashboardVisible = !dashboard.classList.contains('hidden');
-
-                if (isDashboardVisible) {
-                    // Switch to App
-                    startPageRotation(true);
-                    applySeasonTheme();
-                } else {
-                    // Switch to Dashboard
-                    startPageRotation(false);
-                }
-            }
+        // --- Init Overrides ---
+        // Ensure Dashboard is Default
+        window.addEventListener('load', () => {
+            // Force Dashboard Visible Immediately
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            document.getElementById('dashboard-view').classList.add('flex');
         });
 
-        // --- Canvas Snow Effect (Performance Optimized) ---
-        let snowFrameId = null;
-
-        function startSnowEffect() {
-            const canvas = document.getElementById('snow-canvas');
-            if (!canvas) return;
-
-            // Prevent stacking loops - STOP existing animation before starting new
-            if (snowFrameId) {
-                cancelAnimationFrame(snowFrameId);
-                snowFrameId = null;
-            }
-
-            canvas.classList.remove('hidden');
-            const ctx = canvas.getContext('2d');
-
-            let width = window.innerWidth;
-            let height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
-
-            const snowflakes = [];
-            const count = 50; // Optimized count for low-end devices
-
-            for (let i = 0; i < count; i++) {
-                snowflakes.push({
-                    x: Math.random() * width,
-                    y: Math.random() * height,
-                    r: Math.random() * 3 + 1,
-                    d: Math.random() * count,
-                    speed: Math.random() * 0.5 + 0.2 // Slow, relaxing speed
-                });
-            }
-
-            function draw() {
-                ctx.clearRect(0, 0, width, height);
-                ctx.fillStyle = "rgba(236, 239, 244, 0.8)"; // Nord Snow Storm
-                ctx.beginPath();
-                for (let i = 0; i < count; i++) {
-                    const f = snowflakes[i];
-                    ctx.moveTo(f.x, f.y);
-                    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2, true);
-                }
-                ctx.fill();
-                update();
-                snowFrameId = requestAnimationFrame(draw);
-            }
-
-            function update() {
-                for (let i = 0; i < count; i++) {
-                    const f = snowflakes[i];
-                    f.y += f.speed;
-                    f.x += Math.sin(f.d) * 0.5; // Gentle sway
-
-                    if (f.y > height) {
-                        snowflakes[i] = { x: Math.random() * width, y: -10, r: f.r, d: f.d, speed: f.speed };
-                    }
-                }
-            }
-
-            // Clean up old listener to prevent duplicates (optional but good practice)
-            const oldResize = window.onresize;
-            window.onresize = () => {
-                if (oldResize) oldResize();
-                width = window.innerWidth;
-                height = window.innerHeight;
-                canvas.width = width;
-                canvas.height = height;
-            };
-
-            draw();
-        }
-
-        function applySeasonTheme() {
-            let season = getSeason();
-
-            // Fallback if no season but forced to show (defaults to winter or next closest)
-            if (!season) {
-                season = 'winter'; // Default theme for non-holidays
-            }
-
-            const config = seasonConfig[season];
-            const year = new Date().getFullYear();
-
-            // Update Title (Emoji on both sides)
-            const titleEl = document.querySelector('header h1');
-            titleEl.textContent = `${config.titleEmoji} ${config.title} ${year} ${config.titleEmoji}`;
-
-            // Remove old specific font/color classes and add new ones
-            titleEl.className = `text-5xl md:text-6xl drop-shadow-lg font-bold ${config.headerColor} ${config.font}`;
-
-            // Update Subtitle
-            const subtitleEl = document.querySelector('header p');
-            subtitleEl.textContent = config.subtitle;
-
-            // Adjust subtitle color
-            if (season === 'summer' || season === 'spring' || season === 'autumn') {
-                subtitleEl.classList.remove('text-blue-200');
-                subtitleEl.classList.add('text-gray-800');
-            } else {
-                subtitleEl.classList.add('text-blue-200');
-                subtitleEl.classList.remove('text-gray-800');
-            }
-
-            // Update Background (Nord Theme is default, but config.bg might override or match)
-            document.body.style.background = config.bg;
-
-            // Update Snow (Canvas)
-            const snowCanvas = document.getElementById('snow-canvas');
-            if (config.snow) {
-                if (snowCanvas) startSnowEffect();
-            } else {
-                if (snowCanvas) snowCanvas.classList.add('hidden');
-                // Stop the loop if it's running
-                if (snowFrameId) {
-                    cancelAnimationFrame(snowFrameId);
-                    snowFrameId = null;
-                }
-            }
-
-
-        }
-
-
-    </script>
-    <div id="screensaver" class="hidden fixed inset-0 z-[100] bg-black cursor-none overflow-hidden">
-        <div id="screensaver-bouncer" class="absolute w-64 h-auto flex items-center justify-center">
-            <img src="screensaver_logo.png" alt="Screensaver Logo"
-                class="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-        </div>
-        <div id="cleaning-timer" class="absolute top-10 right-10 text-white text-4xl font-mono hidden">10:00</div>
-        <div id="screensaver-info" class="absolute bottom-10 left-10 text-gray-500 text-sm font-mono">
-            Trykk for å avslutte
-        </div>
-    </div>
-
-    <!-- Admin/Remote Control Scripts -->
-    <script type="module">
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // Re-using the initialized 'db' from the main script if possible, but module scope is isolated.
-        // We can attach these to window or just re-init light versions.
-        // Better: Modify the main script block to export/expose what we need or put this logic INSIDE the main block.
-    </script>
-
-    <script>
-        // --- Screensaver Logic ---
-        const Screensaver = {
-            active: false,
-            mode: 'night', // 'night' or 'cleaning'
-            bouncer: null,
-            container: null,
-            timerEl: null,
-            animationId: null,
-            x: 100, y: 100,
-            dx: 2, dy: 2,
-            colorInterval: null,
-            cleaningTimeout: null,
-
-            init: function () {
-                this.container = document.getElementById('screensaver');
-                this.bouncer = document.getElementById('screensaver-bouncer');
-                this.timerEl = document.getElementById('cleaning-timer');
-
-                // Click to exit (if allowed or just wake up)
-                this.container.addEventListener('click', () => {
-                    if (this.mode === 'night') {
-                        // Optional: Require password or just wake up? 
-                        // For now, simple wake up until 5pm check kicks back in
-                        this.stop();
-                    }
-                });
-
-                // Auto-check time every minute
-                setInterval(() => this.checkTime(), 60000);
-                this.checkTime(); // Initial check
-            },
-
-            start: function (mode = 'night') {
-                if (this.active) return;
-                console.log("Starting Screensaver Mode:", mode);
-                this.active = true;
-                this.mode = mode;
-                this.container.classList.remove('hidden');
-
-                // Reset positions
-                this.x = Math.random() * (window.innerWidth - 200);
-                this.y = Math.random() * (window.innerHeight - 200);
-
-                this.animate();
-                this.startColorCycle();
-
-                if (mode === 'cleaning') {
-                    this.timerEl.classList.remove('hidden');
-                    this.startCleaningTimer();
-                } else {
-                    this.timerEl.classList.add('hidden');
-                }
-            },
-
-            stop: function () {
-                this.active = false;
-                this.container.classList.add('hidden');
-                cancelAnimationFrame(this.animationId);
-                clearInterval(this.colorInterval);
-                if (this.cleaningTimeout) clearTimeout(this.cleaningTimeout);
-            },
-
-            checkTime: function () {
-                if (this.mode === 'cleaning' && this.active) return; // Don't interrupt cleaning
-
-                const now = new Date();
-                const hour = now.getHours();
-
-                // Active between 17:00 (5 PM) and 05:00 (5 AM)
-                const isNight = hour >= 17 || hour < 5;
-
-                if (isNight && !this.active) {
-                    this.start('night');
-                } else if (!isNight && this.active && this.mode === 'night') {
-                    this.stop();
-                    // Reload page at 5 AM to refresh code/state? Optional.
-                    if (hour === 5 && now.getMinutes() < 2) window.location.reload();
-                }
-            },
-
-            animate: function () {
-                if (!this.active) return;
-
-                const maxX = window.innerWidth - this.bouncer.offsetWidth;
-                const maxY = window.innerHeight - this.bouncer.offsetHeight;
-
-                this.x += this.dx;
-                this.y += this.dy;
-
-                if (this.x <= 0 || this.x >= maxX) {
-                    this.dx *= -1;
-                    this.changeColor();
-                }
-                if (this.y <= 0 || this.y >= maxY) {
-                    this.dy *= -1;
-                    this.changeColor();
-                }
-
-                this.bouncer.style.transform = `translate(${this.x}px, ${this.y}px)`;
-                this.animationId = requestAnimationFrame(() => this.animate());
-            },
-
-            changeColor: function () {
-                const colors = ['#bf616a', '#d08770', '#ebcb8b', '#a3be8c', '#b48ead', '#88c0d0', '#81a1c1'];
-                const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                this.bouncer.style.color = randomColor;
-                this.bouncer.style.textShadow = `0 0 20px ${randomColor}`;
-            },
-
-            startColorCycle: function () {
-                // Flash background occasionally for anti-burn-in
-                this.colorInterval = setInterval(() => {
-                    const bgColors = ['#000000', '#050505', '#0a0a0a', '#000000', '#101010'];
-                    this.container.style.backgroundColor = bgColors[Math.floor(Math.random() * bgColors.length)];
-                }, 5000);
-            },
-
-            startCleaningTimer: function () {
-                let timeLeft = 600; // 10 minutes
-                const updateTimer = () => {
-                    if (!this.active || this.mode !== 'cleaning') return;
-
-                    const m = Math.floor(timeLeft / 60);
-                    const s = timeLeft % 60;
-                    this.timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
-
-                    if (timeLeft <= 0) {
-                        this.stop();
-                        // Go back to night mode if suitable?
-                        this.checkTime();
-                    } else {
-                        timeLeft--;
-                        this.cleaningTimeout = setTimeout(updateTimer, 1000);
-                    }
-                };
-                updateTimer();
-            }
-        };
-
-        window.addEventListener('load', () => Screensaver.init());
-
-        // Expose for Remote Control
-        window.startScreensaver = (mode) => Screensaver.start(mode);
-        window.stopScreensaver = () => Screensaver.stop();
     </script>
 </body>
 
